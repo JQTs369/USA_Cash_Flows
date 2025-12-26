@@ -165,7 +165,7 @@ with tab1:
 
         # 2. Initialize Session State
         if 'start_y' not in st.session_state:
-            st.session_state.start_y = 1992
+            st.session_state.start_y = 1993
 
         if 'end_y' not in st.session_state:
             st.session_state.end_y = 2001
