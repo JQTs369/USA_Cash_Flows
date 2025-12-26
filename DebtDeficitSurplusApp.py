@@ -56,8 +56,10 @@ st.set_page_config(page_title="USA Reality Project", layout="wide")
 st.title("USA Cash Flows")
 st.caption("Visualizing America's National Debt and Fiscal History")
 
-
+# bring in our data
 dfDebt, dfPresidents, dfDeficit = load_data()
+
+
 # 4. LIVE DONATION & EXPENSE TRACKER ---
 # Replace this URL with your actual Google Sheet Share Link
 spreadsheet_url = "https://docs.google.com/spreadsheets/d/1Cma1Wdk4yYLq5fiPDG5YCythxEwYnqBPh0Zplro3mD4/edit?usp=sharing"
