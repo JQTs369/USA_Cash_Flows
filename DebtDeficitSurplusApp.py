@@ -105,7 +105,7 @@ st.divider()
 viewType = st.pills("Analysis View", ["President", "Year"], selection_mode="single", default="President")
 st.divider()
 
-tab1, tab2 = st.tabs(["📊 Data Analysis", "📖 Get Learnt (FAQ)"])
+tab1, tab2, tab3 = st.tabs(["📊 Data Analysis", "💸 Transparency Ledger" ,"📖 Get Learnt (FAQ)"])
 
 with tab1:
     if viewType == "President":
@@ -330,6 +330,54 @@ with tab1:
         st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
+    st.header("Project Transparency & Resources")
+
+    # 1. The Call to Action
+    st.info("This project is 100% independent. No ads, no corporate sponsors. Just data.")
+
+    # Check if we have a username, otherwise show a "Coming Soon" state
+    bmac_user = "YOUR_USERNAME"
+    if bmac_user == "YOUR_USERNAME":
+        st.warning(
+            "🚧 **Donation Portal Coming Soon:** I am currently setting up a dedicated project account to keep these funds 100% separate from personal assets.")
+    else:
+        st.link_button("☕ Support the Project", f"https://www.buymeacoffee.com/{bmac_user}")
+
+    st.divider()
+
+    # 2. The Detailed Ledger with Error Handling
+    st.subheader("Live Project Ledger")
+
+    try:
+        # We check if the dataframes exist and aren't just empty 'None' objects
+        if 'df_donations_live' in locals() and 'df_expenses_live' in locals():
+            col_led1, col_led2 = st.columns(2)
+
+            with col_led1:
+                st.write("**Recent Donations**")
+                if not df_donations_live.empty:
+                    st.dataframe(df_donations_live, use_container_width=True, hide_index=True)
+                else:
+                    st.caption("No donations recorded yet.")
+
+            with col_led2:
+                st.write("**Operating Expenses**")
+                if not df_expenses_live.empty:
+                    st.dataframe(df_expenses_live, use_container_width=True, hide_index=True)
+                else:
+                    st.caption("No expenses recorded yet.")
+        else:
+            raise NameError  # Trigger the exception if data isn't loaded
+
+    except Exception:
+        # This is your "Finally/Fallback" view while the GSheets connection is WIP
+        st.markdown("""
+        > 🛠️ **Ledger Status: Connection Pending** > The live transparency ledger is currently being linked to the project's data-tracking sheet. 
+        > Once live, this section will show real-time audits of every dollar received and spent.
+        """)
+
+
+with tab3:
     st.header("Data Sources & FAQ")
 
     st.markdown("""
