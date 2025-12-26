@@ -54,7 +54,7 @@ dfDebt, dfPresidents, dfDeficit = load_data()
 st.set_page_config(page_title="USA Reality Project", layout="wide")
 # Add your banner (Replace 'banner.jpg' with your filename or a URL)
 # Use use_container_width=True to make it stretch
-# st.image("resources\IMG_1335.jpg", use_container_width=True)
+# st.image("resources\IMG_1335.jpg", use_container_width=True) #TODO: try to get this banner to work
 
 st.title("USA Cash Flows")
 st.caption("Visualizing America's National Debt and Fiscal History")
@@ -67,26 +67,27 @@ tab1, tab2 = st.tabs(["📊 Data Analysis", "📖 Get Learnt (FAQ)"])
 
 with tab1:
     if viewType == "President":
-        # --- 1. SESSION STATE INITIALIZATION ---
-        # This keeps your choice from resetting to index 0
+        # --- 1. MEMORY INITIALIZATION ---
+        # This sets the very first person the user sees when they open the site
         if 'selected_pres' not in st.session_state:
             st.session_state.selected_pres = "Bill Clinton"
 
-        # --- 2. PRESIDENT SELECTOR ---
+        # --- 2. THE SELECTOR ---
         st.subheader("Presidential Fiscal Analysis")
 
+        # We calculate the index based on whatever is currently in memory
+        pres_list = dfPresidents['name'].tolist()
+        current_index = pres_list.index(st.session_state.selected_pres)
 
-        # Callback to save selection
-        def update_pres():
-            st.session_state.selected_pres = st.session_state.temp_pres
-
-
+        # We use the 'key' to let Streamlit handle the saving automatically
         president = st.selectbox(
             "Choose a President",
-            dfPresidents['name'],
-            index=dfPresidents['name'].tolist().index(st.session_state.selected_pres)
+            pres_list,
+            index=current_index,
+            key="pres_selector_key"
         )
-        # This line saves your choice so it's there for the next "rerun"
+
+        # Immediately update the memory so the next time the app runs, it stays here
         st.session_state.selected_pres = president
 
         # --- 3. DATA FILTERING ---
