@@ -112,8 +112,10 @@ with tab1:
         st.write("**Annual Deficit & Cumulative Spending**")
         m4, m5, m6 = st.columns(3)
         m4.metric("Annual Deficit (Start)", format_large_number(beginning_deficit))
-        m5.metric("Annual Deficit (End)", format_large_number(ending_deficit),
-                  delta=format_large_number(deficit_growth), delta_color="inverse")
+        m5.metric("Annual Deficit (End)",
+                  format_large_number(ending_deficit),
+                  delta=format_large_number(deficit_growth),
+                  delta_color="normal")
         m6.metric("Total Term Overspending", format_large_number(cumulative_deficit))
 
         st.divider()
