@@ -152,6 +152,10 @@ with tab1:
                   delta_color="normal")  # Green if move toward surplus
         m6.metric("Total Term Overspending", format_large_number(cumulative_deficit))
 
+        # Calculate the absolute difference for display
+        abs_diff = abs(responsibility_gap)
+        comparison_word = "lower" if responsibility_gap < 0 else "higher"
+
         st.write("---")
         st.markdown("### ⚖️ The Inherited Path")
         c1, c2 = st.columns(2)
@@ -162,8 +166,15 @@ with tab1:
             st.metric("Hypothetical Debt", format_large_number(hypothetical_ending_debt))
 
         with c2:
-            st.write(f"Actual debt was {format_large_number(responsibility_gap)} higher than the inherited path.")
-            st.metric("Policy/Economy Impact", format_large_number(responsibility_gap), delta_color="inverse")
+            # This dynamic text fixes the Bill Clinton "Double Negative" issue
+            st.write(
+                f"Actual debt ended up **{format_large_number(abs_diff)} {comparison_word}** than the inherited path.")
+
+            # We use "normal" delta color here because for Clinton, a negative number is SUCCESS
+            st.metric("Policy/Economy Impact",
+                      format_large_number(responsibility_gap),
+                      delta="Beat the Path" if responsibility_gap < 0 else "Added to Path",
+                      delta_color="normal" if responsibility_gap < 0 else "inverse")
 
         st.divider()
 
