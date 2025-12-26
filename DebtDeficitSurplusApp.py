@@ -1,78 +1,73 @@
 
 # TODO: Make a web app with docker and use streamlit or PyQT(advanced)
-
-# #imports
+# --- Imports ---
 import streamlit as st
 import plotly.graph_objects as go
 from AmericanRealityClasses import TreasuryApi as TA
 import pandas as pd
 import math
 
-# needed for numbers to display without scientific notation
-# pd.options.display.float_format = '{:,.2f}'.format
 
-#Create isntance to get data
-dfInstance = TA.Treasury()
-BaseUrl = r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding'
-dfDebt = dfInstance.getHistoricalDebtAPIData(BaseUrl)
-dfPresidents = pd.read_json('AmericanRealityClasses/resources/USAPresidents.json')
+# --- Data Loading (Keep your existing logic) ---
+@st.cache_data  # This prevents the API from hitting every time you click a tab!
+def load_data():
+    dfInstance = TA.Treasury()
+    BaseUrl = r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding'
+    debt = dfInstance.getHistoricalDebtAPIData(BaseUrl)
+    presidents = pd.read_json('AmericanRealityClasses/resources/USAPresidents.json')
 
-# this will dL the info on every click
-# dfDeficit = dfInstance.getTaxPolicyDownload() 
+    path = 'AmericanRealityClasses/resources/TaxPolicyCentrHistoricRevenues.xlsx'
+    deficit = pd.read_excel(path, engine='openpyxl', skiprows=6)
+    deficit = deficit.drop(0)
+    deficit.rename(columns={
+        "Unnamed: 0": "Fiscal Year",
+        "Total": "Receipts Total",
+        "Total.1": "Outlays Total",
+        "Total.2": "Surplus or Deficit(-) Total"
+    }, inplace=True)
 
-# manual dfDeficit comment out when a new download is needed -Start #TODO: put a yearly time into this method!
-path = 'AmericanRealityClasses/resources/TaxPolicyCentrHistoricRevenues.xlsx'
-
-#start on main headers
-dfDeficit = pd.read_excel(path,engine='openpyxl',skiprows=6)
-# drop first row is empty
-dfDeficit = dfDeficit.drop(0)
-# resname lost columns
-dfDeficit.rename(columns={"Unnamed: 0":"Fiscal Year","Total":"Receipts Total","Total.1":"Outlays Total","Total.2":"Surplus or Deficit(-) Total"},inplace=True)
-# get rid of dat at the end of table dealing wiith estimating data
-estimateIndex = dfDeficit[dfDeficit['Fiscal Year'].str.contains('Estimates',case=False,na=False)].index[0]
-dfDeficit = dfDeficit.iloc[:estimateIndex-2]
-dfDeficit = dfDeficit[dfDeficit['Fiscal Year']!='TQ']
-dfDeficit['Fiscal Year'] = dfDeficit['Fiscal Year'].astype(int)
-dfDeficit['Surplus or Deficit(-) Total'] = dfDeficit['Surplus or Deficit(-) Total'] * 1_000_000
-# manual dfDeficit comment out when a new download is needed -Finsih comment 
+    estimateIndex = deficit[deficit['Fiscal Year'].astype(str).str.contains('Estimates', case=False, na=False)].index[0]
+    deficit = deficit.iloc[:estimateIndex - 2]
+    deficit = deficit[deficit['Fiscal Year'] != 'TQ']
+    deficit['Fiscal Year'] = deficit['Fiscal Year'].astype(int)
+    deficit['Surplus or Deficit(-) Total'] = deficit['Surplus or Deficit(-) Total'] * 1_000_000
+    return debt, presidents, deficit
 
 
-# page defaults:
-st.set_page_config(layout="wide")
+dfDebt, dfPresidents, dfDeficit = load_data()
 
+# --- Page Config ---
+st.set_page_config(page_title="USA Reality Project", layout="wide")
+
+# --- Header Section ---
 st.title("USA Reality Project")
+st.caption("Visualizing America's National Debt and Fiscal History")
 
-# Make tabs containers so it views better on mobile phones
-tab1, tab2, tab3, = st.tabs(["📊 National Debt", "📉 Annual Deficit", "📖 Get Learnt (FAQ)"])
+# --- Main Navigation (Replaces Sidebar) ---
+# We use a segmented control for a professional "switch" look
+viewType = st.pills("Analysis View", ["President", "Year"], selection_mode="single", default="President")
 
-# Create a custom container with a different background color
-# st.markdown(
-#     """
-#     <div style="background-color:#f2f2f2; padding: 20px; border-radius: 10px; text-align: center;">
-#         <h1 style="color: #1f77b4;">Welcome To JQTs369 First App!</h1>
-#         <h2 style="color: #ff6347;">History of America's Debt & Surplus/Deficits.</h2>
-#     </div>
-#     """,
-#     unsafe_allow_html=True
-# )
+st.divider()
 
-# Add vertical space after the container
-st.markdown("<br>", unsafe_allow_html=True)
+# --- Tab Layout ---
+tab1, tab2, tab3 = st.tabs(["📊 Data Analysis", "🔄 Combined View", "📖 Get Learnt (FAQ)"])
 
-# Add some vertical space before the next section
-st.markdown("<br>", unsafe_allow_html=True)
+with tab1:
+    if viewType == "President":
+        st.subheader("Presidential Fiscal Analysis")
+        # INSERT THE REFACTORED PRESIDENT CODE HERE
 
-# User Selection Opitions
-# viewType = st.selectbox('President/Year Selection:', ['President','Year'])
-viewType = st.sidebar.radio('President/Year Selection:', ['President','Year'])
+    else:
+        st.subheader("Historical Yearly Analysis")
+        # INSERT YOUR BY-YEAR CODE HERE
 
-st.markdown(
-    f"""
-    <h1 style='text-align: center;'>President Selected: {viewType}</h1>
-    """, 
-    unsafe_allow_html=True
-)
+with tab2:
+    st.header("The Full Picture")
+    st.write("Combined Debt & Deficit visualization coming soon!")
+
+with tab3:
+    st.header("Frequently Asked Questions")
+    st.info("The data is sourced directly from the US Treasury Fiscal Service API.")
 if viewType == "President":
     # 1. Main Page Selector (Better for Mobile)
     st.subheader("Select a President to Analyze")
