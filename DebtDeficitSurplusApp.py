@@ -59,7 +59,7 @@ st.caption("Visualizing America's National Debt and Fiscal History")
 viewType = st.pills("Analysis View", ["President", "Year"], selection_mode="single", default="President")
 st.divider()
 
-tab1, tab2, tab3 = st.tabs(["📊 Data Analysis", "🔄 Combined View", "📖 Get Learnt (FAQ)"])
+tab1, tab2 = st.tabs(["📊 Data Analysis", "📖 Get Learnt (FAQ)"])
 
 with tab1:
     if viewType == "President":
@@ -131,17 +131,61 @@ with tab1:
         st.plotly_chart(fig, use_container_width=True)
 
     else:
-        # --- YEAR VIEW SIDEBAR LOGIC ---
-        # The slider only appears when "Year" is selected
-        st.sidebar.subheader("Year Range Settings")
-        min_y, max_y = int(dfDebt['record_fiscal_year'].min()), int(dfDebt['record_fiscal_year'].max())
-        y_range = st.sidebar.slider("Select Range", min_y, max_y, (1982, 2022))
+        # --- YEAR VIEW CONTROLS ---
+        st.subheader("Historical Analysis: Custom Range")
 
-        st.subheader(f"Historical Analysis: {y_range[0]} - {y_range[1]}")
+        # 1. Setup selectable bounds from your dataframe
+        min_selectable = int(dfDebt['record_fiscal_year'].min())
+        max_selectable = int(dfDebt['record_fiscal_year'].max())
 
-        debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= y_range[0]) & (dfDebt['record_fiscal_year'] <= y_range[1])]
-        deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= y_range[0]) & (dfDeficit['Fiscal Year'] <= y_range[1])]
+        # 2. Initialize Session State so widgets can stay in sync
+        if 'start_y' not in st.session_state:
+            st.session_state.start_y = 1982
+        if 'end_y' not in st.session_state:
+            st.session_state.end_y = 2022
 
+
+        # 3. Define Callback Functions to link the Slider and Number Inputs
+        def update_slider_from_inputs():
+            # When typing in boxes, update the slider value
+            st.session_state.y_slider = (st.session_state.start_y, st.session_state.end_y)
+
+
+        def update_inputs_from_slider():
+            # When dragging the slider, update the box values
+            st.session_state.start_y = st.session_state.y_slider[0]
+            st.session_state.end_y = st.session_state.y_slider[1]
+
+
+        # 4. Create the Layout (Boxes on the sides, Slider in the middle)
+        col_left, col_mid, col_right = st.columns([1, 3, 1])
+
+        with col_left:
+            st.number_input("Start Year", min_selectable, max_selectable,
+                            key="start_y", on_change=update_slider_from_inputs)
+
+        with col_mid:
+            st.write("##")  # Spacing for alignment
+            st.slider("Year Range Slider", min_selectable, max_selectable,
+                      key="y_slider", on_change=update_inputs_from_slider,
+                      value=(st.session_state.start_y, st.session_state.end_y),
+                      label_visibility="collapsed")
+
+        with col_right:
+            st.number_input("End Year", min_selectable, max_selectable,
+                            key="end_y", on_change=update_slider_from_inputs)
+
+        # 5. Your Original Data Filtering Logic
+        # We use the session_state values which are now synced
+        y_low = st.session_state.start_y
+        y_high = st.session_state.end_y
+
+        st.info(f"Analyzing Fiscal Data from {y_low} to {y_high}")
+
+        debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= y_low) & (dfDebt['record_fiscal_year'] <= y_high)]
+        deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= y_low) & (dfDeficit['Fiscal Year'] <= y_high)]
+
+        # 6. Your Original Merger Logic
         merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
         combined_data = pd.DataFrame({
             'Year': merger['record_fiscal_year'].astype(int),
@@ -169,9 +213,21 @@ with tab1:
         st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
-    st.header("The Full Picture")
-    st.info("Combined view logic goes here!")
+    st.header("Data Sources & FAQ")
 
-with tab3:
-    st.header("Frequently Asked Questions")
-    st.write("Sourced from Treasury API.")
+    st.markdown("""
+        ### 📚 Official Resources
+        This project pulls live data from official government and policy research institutions:
+
+        * **[Treasury Fiscal Data API](https://fiscaldata.treasury.gov/api-documentation/)**: Provides the historical debt outstanding from 1789 to present.
+        * **[Historical Debt Dataset](https://fiscaldata.treasury.gov/datasets/historical-debt-outstanding/historical-debt-outstanding)**: Direct source for government debt summaries.
+        * **[Tax Policy Center](https://taxpolicycenter.org/sites/default/files/statistics/spreadsheet/fed_receipt_funds_3.xlsx)**: Used for deficit and outlay data that supplements the Treasury's records.
+
+        ---
+        ### 💡 FAQ
+        **Why does the Treasury only have records back to 1995 for some sets?**
+        As noted in our sources, while debt totals are tracked back to 1789, detailed digital breakdowns of receipts and outlays often require external historical research (like the Tax Policy Center) to "make it make sense" for earlier decades.
+
+        **How often is this data updated?**
+        The Treasury API is updated daily, but historical annual debt is finalized at the end of each fiscal year.
+        """)
