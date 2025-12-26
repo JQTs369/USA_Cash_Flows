@@ -80,10 +80,10 @@ with tab1:
         president = st.selectbox(
             "Choose a President",
             dfPresidents['name'],
-            index=dfPresidents['name'].tolist().index(st.session_state.selected_pres),
-            key="temp_pres",
-            on_change=update_pres
+            index=dfPresidents['name'].tolist().index(st.session_state.selected_pres)
         )
+        # This line saves your choice so it's there for the next "rerun"
+        st.session_state.selected_pres = president
 
         # --- 3. DATA FILTERING ---
         president_data = dfPresidents[dfPresidents['name'] == president].iloc[0]
