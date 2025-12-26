@@ -83,9 +83,15 @@ with tab1:
 
         # Metrics
         st.markdown(f"### {president}'s Fiscal Snapshot ({start_year} - {end_year})")
-        beginning_debt = combined_data[combined_data['Year'] == start_year]['Debt'].iloc[0] if not combined_data[combined_data['Year'] == start_year].empty else 0
-        ending_debt = combined_data[combined_data['Year'] == end_year]['Debt'].iloc[0] if not combined_data[combined_data['Year'] == end_year].empty else 0
-        
+
+        beginning_debt = combined_data[combined_data['Year'] == start_year]['Debt'].iloc[0] if not combined_data[
+            combined_data['Year'] == start_year].empty else 0
+        ending_debt = combined_data[combined_data['Year'] == end_year]['Debt'].iloc[0] if not combined_data[
+            combined_data['Year'] == end_year].empty else 0
+
+        # ADD THIS LINE:
+        total_debt_change = ending_debt - beginning_debt
+
         # Cumulative = the total amount of overspending over the whole term
         cumulative_deficit = combined_data['Deficit'].sum()
         beginning_deficit = combined_data[combined_data['Year'] == start_year]['Deficit'].iloc[0] if not combined_data[
@@ -97,16 +103,16 @@ with tab1:
         # Row 1: The Debt (The "Total Bill")
         st.write("**National Debt Progress**")
         m1, m2, m3 = st.columns(3)
-        m1.metric("Debt at Start", format_large_number(b_d))
-        m2.metric("Debt at End", format_large_number(e_d))
+        m1.metric("Debt at Start", format_large_number(beginning_debt))
+        m2.metric("Debt at End", format_large_number(ending_debt))
         m3.metric("Total Debt Increase", format_large_number(total_debt_change),
                   delta=format_large_number(total_debt_change), delta_color="inverse")
 
         # Row 2: The Deficit (The "Annual Overspending")
         st.write("**Annual Deficit & Cumulative Spending**")
         m4, m5, m6 = st.columns(3)
-        m4.metric("Annual Deficit (Start)", format_large_number(beg_def))
-        m5.metric("Annual Deficit (End)", format_large_number(end_def),
+        m4.metric("Annual Deficit (Start)", format_large_number(beginning_deficit))
+        m5.metric("Annual Deficit (End)", format_large_number(ending_deficit),
                   delta=format_large_number(deficit_growth), delta_color="inverse")
         m6.metric("Total Term Overspending", format_large_number(cumulative_deficit))
 
