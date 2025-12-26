@@ -73,236 +73,146 @@ tab1, tab2, tab3 = st.tabs(["📊 Data Analysis", "🔄 Combined View", "📖 Ge
 with tab1:
     if viewType == "President":
         st.subheader("Presidential Fiscal Analysis")
-        # INSERT THE REFACTORED PRESIDENT CODE HERE
+        # 1. Selector
+        default_president = "Bill Clinton"
+        president = st.selectbox(
+            "Choose a President",
+            dfPresidents['name'],
+            index=dfPresidents['name'].tolist().index(default_president)
+        )
+
+        # --- Data Processing ---
+        presidentData = dfPresidents[dfPresidents['name'] == president].iloc[0]
+        startYear, endYear = int(presidentData['start_year']), int(presidentData['end_year'])
+
+        debtData = dfDebt[(dfDebt['record_fiscal_year'] >= startYear) & (dfDebt['record_fiscal_year'] <= endYear)]
+        deficitData = dfDeficit[(dfDeficit['Fiscal Year'] >= startYear) & (dfDeficit['Fiscal Year'] <= endYear)]
+
+        mergerdf = pd.merge(debtData, deficitData, left_on='record_fiscal_year',
+                            right_on='Fiscal Year', how='outer', suffixes=('_debt', '_deficit'))
+
+        chartData = pd.DataFrame({
+            'Year': mergerdf['record_fiscal_year'].astype(int),
+            'Debt': mergerdf['debt_outstanding_amt'],
+            'Deficit/Surplus': mergerdf['Surplus or Deficit(-) Total']
+        })
+
+        # --- Metrics Snapshot ---
+        st.markdown(f"### {president}'s Fiscal Snapshot ({startYear} - {endYear})")
+        beg_debt = chartData[chartData['Year'] == startYear]['Debt'].iloc[0] if not chartData[
+            chartData['Year'] == startYear].empty else 0
+        end_debt = chartData[chartData['Year'] == endYear]['Debt'].iloc[0] if not chartData[
+            chartData['Year'] == endYear].empty else 0
+
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Debt at Start", format_large_number(beg_debt))
+        m2.metric("Debt at End", format_large_number(end_debt))
+        m3.metric("Total Change", format_large_number(end_debt - beg_debt),
+                  delta=format_large_number(end_debt - beg_debt), delta_color="inverse")
+
+        # --- Graph ---
+        fig = go.Figure()
+        fig.add_trace(
+            go.Scatter(x=chartData['Year'], y=chartData['Debt'], name='Total Debt', line=dict(color='#FFD700', width=4),
+                       yaxis='y1'))
+        fig.add_trace(go.Bar(x=chartData['Year'], y=chartData['Deficit/Surplus'], name='Annual Deficit/Surplus',
+                             marker=dict(color='#2E86C1'), opacity=0.6, yaxis='y2'))
+
+        fig.update_layout(template='plotly_dark', hovermode='x unified', height=500,
+                          yaxis=dict(title='Total Debt'), yaxis2=dict(title='Deficit', overlaying='y', side='right'))
+
+        st.plotly_chart(fig, use_container_width=True)
+
 
     else:
+
         st.subheader("Historical Yearly Analysis")
-        # INSERT YOUR BY-YEAR CODE HERE
 
-with tab2:
-    st.header("The Full Picture")
-    st.write("Combined Debt & Deficit visualization coming soon!")
+        # 1. Main Page Slider (Easier for thumbs on mobile!)
 
-with tab3:
-    st.header("Frequently Asked Questions")
-    st.info("The data is sourced directly from the US Treasury Fiscal Service API.")
-if viewType == "President":
-    # 1. Main Page Selector (Better for Mobile)
-    st.subheader("Select a President to Analyze")
-    default_president = "Bill Clinton"
-    president = st.selectbox(
-        "Choose a President",
-        dfPresidents['name'],
-        index=dfPresidents['name'].tolist().index(default_president),
-        label_visibility="collapsed"  # Keeps it clean
-    )
+        min_y, max_y = int(dfDebt['record_fiscal_year'].min()), int(dfDebt['record_fiscal_year'].max())
 
-    # --- Data Processing (Keep your existing logic) ---
-    presidentData = dfPresidents[dfPresidents['name'] == president].iloc[0]
-    startYear = int(presidentData['start_year'])
-    endYear = int(presidentData['end_year'])
-    debtData = dfDebt[(dfDebt['record_fiscal_year'] >= startYear) & (dfDebt['record_fiscal_year'] <= endYear)]
-    deficitData = dfDeficit[(dfDeficit['Fiscal Year'] >= startYear) & (dfDeficit['Fiscal Year'] <= endYear)]
+        selected_years = st.slider("Select Year Range", min_y, max_y, (1982, 2022))
 
-    mergerdf = pd.merge(debtData, deficitData, left_on='record_fiscal_year',
-                        right_on='Fiscal Year', how='outer', suffixes=('_debt', '_deficit'))
+        # 2. Filter the data
 
-    chartData = pd.DataFrame({
-        'Year': mergerdf['record_fiscal_year'].astype(int),
-        'Debt': mergerdf['debt_outstanding_amt'],
-        'Deficit/Surplus': mergerdf['Surplus or Deficit(-) Total']
-    })
+        debtData = dfDebt[
+            (dfDebt['record_fiscal_year'] >= selected_years[0]) & (dfDebt['record_fiscal_year'] <= selected_years[1])]
 
-    # --- 2. THE "SNAPSHOT" HEADER (Replaces your HTML table) ---
-    # This automatically stacks vertically on mobile!
-    st.markdown(f"### {president}'s Fiscal Snapshot ({startYear} - {endYear})")
+        deficitData = dfDeficit[
+            (dfDeficit['Fiscal Year'] >= selected_years[0]) & (dfDeficit['Fiscal Year'] <= selected_years[1])]
 
-    beg_debt = chartData[chartData['Year'] == startYear]['Debt'].iloc[0] if not chartData[
-        chartData['Year'] == startYear].empty else 0
-    end_debt = chartData[chartData['Year'] == endYear]['Debt'].iloc[0] if not chartData[
-        chartData['Year'] == endYear].empty else 0
+        mergerdf = pd.merge(debtData, deficitData, left_on='record_fiscal_year',
 
-    # Calculate the change during the term
-    debt_change = end_debt - beg_debt
+                            right_on='Fiscal Year', how='outer', suffixes=('_debt', '_deficit'))
 
-    m1, m2, m3 = st.columns(3)
-    m1.metric("Debt at Start", format_large_number(beg_debt))
-    m2.metric("Debt at End", format_large_number(end_debt))
-    m3.metric("Total Change", format_large_number(debt_change), delta=format_large_number(debt_change),
-              delta_color="inverse")
+        chartData = pd.DataFrame({
 
-    st.divider()
+            'Year': mergerdf['record_fiscal_year'].astype(int),
 
-    # --- 3. THE GRAPH (Mobile Fix) ---
-    # We remove the fixed width=2200 so it fits the screen automatically
-    fig = go.Figure()
+            'Debt': mergerdf['debt_outstanding_amt'],
 
-    # Add Debt Line
-    fig.add_trace(go.Scatter(x=chartData['Year'], y=chartData['Debt'], name='Total Debt',
-                             line=dict(color='#FFD700', width=4), yaxis='y1'))
+            'Deficit/Surplus': mergerdf['Surplus or Deficit(-) Total']
 
-    # Add Deficit Bar (Easier to see "yearly flow" vs "total balance")
-    fig.add_trace(go.Bar(x=chartData['Year'], y=chartData['Deficit/Surplus'], name='Annual Deficit/Surplus',
-                         marker=dict(color='#2E86C1'), opacity=0.6, yaxis='y2'))
+        })
 
-    fig.update_layout(
-        hovermode='x unified',
-        template='plotly_dark',
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-        margin=dict(l=0, r=0, t=30, b=0),
-        yaxis=dict(title='Total Debt', side='left'),
-        yaxis2=dict(title='Annual Deficit/Surplus', overlaying='y', side='right'),
-        height=500  # Fixed height, but width is responsive
-    )
+        # 3. Snapshot Metrics (Consistent with President view)
 
-    # IMPORTANT: use_container_width=True is the key for mobile!
-    st.plotly_chart(fig, use_container_width=True)
+        st.markdown(f"### Fiscal Overview: {selected_years[0]} to {selected_years[1]}")
 
-elif viewType == 'Year':
-    # Add a range slider for the user to pick a range of years
-    min_year = int(dfDebt['record_fiscal_year'].min())
-    max_year = int(dfDebt['record_fiscal_year'].max())
-    # selected_years = st.slider("Select Year Range", min_year, max_year, (1993, 2001))
-    st.sidebar.subheader("Year Range Selector")
-    selected_years = st.sidebar.slider("",min_year, max_year, (1982, 2002))
+        # Get start/end values for metrics
 
-    # Filter the data for the selected year range
-    debtData = dfDebt[(dfDebt['record_fiscal_year'] >= selected_years[0]) & (dfDebt['record_fiscal_year'] <= selected_years[1])]
-    deficitData = dfDeficit[(dfDeficit['Fiscal Year'] >= selected_years[0]) & (dfDeficit['Fiscal Year'] <= selected_years[1])]
+        try:
 
-    mergerdf = pd.merge(
-        debtData,
-        deficitData,
-        left_on='record_fiscal_year',
-        right_on='Fiscal Year',
-        how='outer',
-        suffixes=('_debt', '_deficit')
-    )
-    mergerdf['record_fiscal_year'] = mergerdf['record_fiscal_year'].astype(str)
+            beg_d = chartData[chartData['Year'] == selected_years[0]]['Debt'].iloc[0]
 
-    # Data Setup for easy plotting
-    chartData = pd.DataFrame({
-        'Year': mergerdf['record_fiscal_year'],
-        'Debt': mergerdf['debt_outstanding_amt'],
-        'Deficit/Surplus': mergerdf['Surplus or Deficit(-) Total']
-    })
-    chartData['Year'] = chartData['Year'].astype(int)
+            end_d = chartData[chartData['Year'] == selected_years[1]]['Debt'].iloc[0]
 
-    # Display the selected year range
-    st.write(f"Selected Year Range: {selected_years[0]} - {selected_years[1]}")
+            d_change = end_d - beg_d
 
+            m1, m2, m3 = st.columns(3)
 
+            m1.metric("Debt at Start", format_large_number(beg_d))
 
-    # Function to format the table with alternating row colors (dark blue and white text)
-    def color_alternating_rows(df):
-        html = df.to_html(index=False, escape=False)
-        
-        # Adding CSS for alternating row colors
-        html = html.replace('<thead>', '<thead style="background-color:#003366; color: white;">')  # Dark blue header
-        rows = html.split('<tr>')
-        
-        for i in range(1, len(rows)):
-            if i % 2 == 0:  # Even rows: dark blue background, white text
-                rows[i] = f'<tr style="background-color: #003366; color: white;">' + rows[i]
-            else:  # Odd rows: keep white background and default color
-                rows[i] = f'<tr style="background-color: #ffffff; color: black;">' + rows[i]
-        
-        return ''.join(rows)
+            m2.metric("Debt at End", format_large_number(end_d))
 
-    # Table summary for the selected year range
-    try:
-        beginningDebt = chartData[(chartData['Year'] == selected_years[0])]['Debt'].iloc[0]
-        endingDebt = chartData[(chartData['Year'] == selected_years[1])]['Debt'].iloc[0]
-    except:
-        beginningDebt = None
-        endingDebt = None
+            m3.metric("Total Change", format_large_number(d_change),
 
-    try:
-        beginningDeficit = chartData[(chartData['Year'] == selected_years[0])]['Deficit/Surplus'].iloc[0]
-        endingDeficit = chartData[(chartData['Year'] == selected_years[1])]['Deficit/Surplus'].iloc[0]
-    except:
-        beginningDeficit = None
-        endingDeficit = None
+                      delta=format_large_number(d_change), delta_color="inverse")
 
-    summaryData = {
-        "Start/End": [
-            'Starting Debt', 'Starting Deficit',
-            'Ending Debt', 'Ending Deficit/Surplus'
-        ],
-        "$ Amounts": [
-            format_large_number(beginningDebt), format_large_number(beginningDeficit),
-            format_large_number(endingDebt), format_large_number(endingDeficit)
-        ]
-    }
-    summaryDf = pd.DataFrame(summaryData)
-    # st.markdown(color_alternating_rows(summaryDf), unsafe_allow_html=True)
-        # Display the table with alternating row colors - Centered
-    st.markdown("<div style='display: flex; justify-content: center;'>", unsafe_allow_html=True)
-    st.markdown(color_alternating_rows(summaryDf), unsafe_allow_html=True)
-    st.markdown("</div>", unsafe_allow_html=True)
+        except:
 
-    # Graphs
-    fig = go.Figure()
+            st.warning("Select a wider range to see metrics.")
 
-    # Add Debt Linechart
-    fig.add_trace(go.Scatter(
-        x=chartData['Year'],
-        y=chartData['Debt'],
-        mode='lines',
-        name='Debt',
-        line=dict(color='yellow'),
-        hovertemplate='%{x}: $%{y} <extra></extra>',
-        yaxis='y1'
-    ))
+        st.divider()
 
-    # Add Deficit/Surplus Linechart
-    fig.add_trace(go.Scatter(
-        x=chartData['Year'],
-        y=chartData['Deficit/Surplus'],
-        mode='lines',
-        name='Deficit/Surplus',
-        line=dict(color="red"),
-        hovertemplate='%{x}: $%{y} <extra></extra>',
-        yaxis='y2'
-    ))
+        # 4. Graphs (Responsive width)
 
-    # Add a bar chart
-    fig.add_trace(go.Bar(
-        x=chartData['Year'],
-        y=chartData['Deficit/Surplus'],
-        name='Deficit/Surplus',
-        marker=dict(color='blue'),
-        hovertemplate='%{x}: $%{y} <extra></extra>',
-        yaxis='y2',
-        opacity=0.4
-    ))
+        fig = go.Figure()
 
-    fig.update_layout(
-        title=f"Debt and Deficit/Surplus from {selected_years[0]} to {selected_years[1]}",
-        title_x=0.5,  # Center the title horizontally
-        title_xanchor='center',  # Ensure the title is anchored at the center
-        title_font=dict(size=24, color="white"),
-        xaxis_title='Year',
-        yaxis=dict(
-            title='Debt ($)',
-            # titlefont=dict(color='yellow'),
-            tickfont=dict(color='yellow')
-        ),
-        yaxis2=dict(
-            title='Deficit/Surplus ($)',
-            # titlefont=dict(color='red'),
-            tickfont=dict(color='red'),
-            overlaying='y',
-            side='right'
-        ),
-        hovermode='x unified',
-        template='plotly_dark',
-        barmode='group',
-        width=2200,
-        height=625
-    )
+        fig.add_trace(go.Scatter(x=chartData['Year'], y=chartData['Debt'], name='Total Debt',
 
-    # Show the Plotly figure in Streamlit
-    st.plotly_chart(fig)
+                                 line=dict(color='yellow', width=3), yaxis='y1'))
 
+        fig.add_trace(go.Bar(x=chartData['Year'], y=chartData['Deficit/Surplus'], name='Deficit/Surplus',
+
+                             marker=dict(color='#2E86C1'), opacity=0.6, yaxis='y2'))
+
+        fig.update_layout(
+
+            template='plotly_dark',
+
+            hovermode='x unified',
+
+            height=550,
+
+            yaxis=dict(title='Total Debt'),
+
+            yaxis2=dict(title='Annual Deficit', overlaying='y', side='right'),
+
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+
+        )
+
+        st.plotly_chart(fig, use_container_width=True)
 
