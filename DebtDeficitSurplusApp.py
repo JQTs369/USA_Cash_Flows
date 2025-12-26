@@ -130,87 +130,97 @@ with tab1:
                           yaxis2=dict(overlaying='y', side='right'))
         st.plotly_chart(fig, use_container_width=True)
 
+
     else:
+
         # --- YEAR VIEW CONTROLS ---
         st.subheader("Historical Analysis: Custom Range")
 
-        # 1. Setup selectable bounds from your dataframe
+        # 1. Setup bounds
         min_selectable = int(dfDebt['record_fiscal_year'].min())
         max_selectable = int(dfDebt['record_fiscal_year'].max())
 
-        # 2. Initialize Session State so widgets can stay in sync
+        # 2. Initialize Session State ONLY IF NOT ALREADY THERE
         if 'start_y' not in st.session_state:
             st.session_state.start_y = 1982
+
         if 'end_y' not in st.session_state:
             st.session_state.end_y = 2022
 
+        if 'y_slider' not in st.session_state:
+            st.session_state.y_slider = (1982, 2022)
 
-        # 3. Define Callback Functions to link the Slider and Number Inputs
-        def update_slider_from_inputs():
-            # When typing in boxes, update the slider value
+        # 3. Synchronizing Functions
+        def update_slider():
             st.session_state.y_slider = (st.session_state.start_y, st.session_state.end_y)
 
-
-        def update_inputs_from_slider():
-            # When dragging the slider, update the box values
+        def update_inputs():
             st.session_state.start_y = st.session_state.y_slider[0]
             st.session_state.end_y = st.session_state.y_slider[1]
 
 
-        # 4. Create the Layout (Boxes on the sides, Slider in the middle)
+        # 4. The UI (Removed 'value=' to stop the warning)
         col_left, col_mid, col_right = st.columns([1, 3, 1])
-
         with col_left:
             st.number_input("Start Year", min_selectable, max_selectable,
-                            key="start_y", on_change=update_slider_from_inputs)
+                            key="start_y", on_change=update_slider)
 
         with col_mid:
-            st.write("##")  # Spacing for alignment
-            st.slider("Year Range Slider", min_selectable, max_selectable,
-                      key="y_slider", on_change=update_inputs_from_slider,
-                      value=(st.session_state.start_y, st.session_state.end_y),
-                      label_visibility="collapsed")
+            st.write("##")
+            st.slider("Range", min_selectable, max_selectable,
+                      key="y_slider", on_change=update_inputs, label_visibility="collapsed")
 
         with col_right:
             st.number_input("End Year", min_selectable, max_selectable,
-                            key="end_y", on_change=update_slider_from_inputs)
 
-        # 5. Your Original Data Filtering Logic
-        # We use the session_state values which are now synced
-        y_low = st.session_state.start_y
-        y_high = st.session_state.end_y
+                            key="end_y", on_change=update_slider)
 
-        st.info(f"Analyzing Fiscal Data from {y_low} to {y_high}")
+            # 5. Data Filtering using the live state
+            y_low, y_high = st.session_state.y_slider
+            debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= y_low) & (dfDebt['record_fiscal_year'] <= y_high)]
+            deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= y_low) & (dfDeficit['Fiscal Year'] <= y_high)]
 
-        debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= y_low) & (dfDebt['record_fiscal_year'] <= y_high)]
-        deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= y_low) & (dfDeficit['Fiscal Year'] <= y_high)]
+            # 6. Your Original Merger Logic
+            merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year',
+                              how='outer')
+            combined_data = pd.DataFrame({
+                'Year': merger['record_fiscal_year'].astype(int),
+                'Debt': merger['debt_outstanding_amt'],
+                'Deficit': merger['Surplus or Deficit(-) Total']
+            })
 
-        # 6. Your Original Merger Logic
-        merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
-        combined_data = pd.DataFrame({
-            'Year': merger['record_fiscal_year'].astype(int),
-            'Debt': merger['debt_outstanding_amt'],
-            'Deficit': merger['Surplus or Deficit(-) Total']
-        })
+            # --- Metrics Section ---
+            try:
+                # Changed y_range[0] to y_low and y_range[1] to y_high
+                b_val = combined_data[combined_data['Year'] == y_low]['Debt'].iloc[0]
+                e_val = combined_data[combined_data['Year'] == y_high]['Debt'].iloc[0]
 
-        try:
-            b_val = combined_data[combined_data['Year'] == y_range[0]]['Debt'].iloc[0]
-            e_val = combined_data[combined_data['Year'] == y_range[1]]['Debt'].iloc[0]
-            m1, m2, m3 = st.columns(3)
-            m1.metric("Starting Debt", format_large_number(b_val))
-            m2.metric("Ending Debt", format_large_number(e_val))
-            m3.metric("Change", format_large_number(e_val - b_val), delta=format_large_number(e_val - b_val),
-                      delta_color="inverse")
-        except:
-            st.info("Expand year range for metrics")
+                m1, m2, m3 = st.columns(3)
+                m1.metric("Starting Debt", format_large_number(b_val))
+                m2.metric("Ending Debt", format_large_number(e_val))
+                m3.metric("Change", format_large_number(e_val - b_val),
+                          delta=format_large_number(e_val - b_val),
+                          delta_color="inverse")
+            except:
+                st.info("Adjust the range to see metrics (Ensure both start and end years have data).")
 
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Debt', line=dict(color='yellow'), yaxis='y1'))
-        fig.add_trace(
-            go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Deficit', marker=dict(color='#2E86C1'), yaxis='y2'))
-        fig.update_layout(template='plotly_dark', hovermode='x unified', height=500,
-                          yaxis2=dict(overlaying='y', side='right'))
-        st.plotly_chart(fig, use_container_width=True)
+            # --- Graph Section ---
+            fig = go.Figure()
+            fig.add_trace(
+                go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Debt', line=dict(color='yellow'),
+                           yaxis='y1'))
+            fig.add_trace(
+                go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Deficit',
+                       marker=dict(color='#2E86C1'), yaxis='y2'))
+
+            fig.update_layout(
+                template='plotly_dark',
+                hovermode='x unified',
+                height=500,
+                yaxis=dict(title="Total Debt"),
+                yaxis2=dict(title="Annual Deficit", overlaying='y', side='right')
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
 with tab2:
     st.header("Data Sources & FAQ")
