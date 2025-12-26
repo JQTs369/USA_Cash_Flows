@@ -225,7 +225,7 @@ with tab1:
             with m_col2:
                 st.metric("Debt at End", format_large_number(ending_debt))
                 st.metric("Annual Deficit (End)", format_large_number(ending_deficit),
-                          delta=format_large_number(deficit_growth), delta_color="inverse")
+                          delta=format_large_number(deficit_growth), delta_color="normal")
             with m_col3:
                 st.metric("Total Debt Increase", format_large_number(total_debt_change),
                           delta=format_large_number(total_debt_change), delta_color="inverse")
