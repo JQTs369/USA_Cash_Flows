@@ -1,12 +1,5 @@
-# grab all of our info we need:
-# Complete history of all of the following:
-    # Debt
-    # Deficit
-    # Suplus
-# Organized by Year:[{values}]
-    # values will be "year":[{{"President": president,"OfficeYears:[ints]","debt":debt,"surplus/deficit":revenueMinusExpenses}, etc for each president}]
 
-# Make a web app with docker and use streamlit or PyQT(advanced) 
+# TODO: Make a web app with docker and use streamlit or PyQT(advanced)
 
 # #imports
 import streamlit as st
@@ -45,18 +38,24 @@ dfDeficit['Surplus or Deficit(-) Total'] = dfDeficit['Surplus or Deficit(-) Tota
 # manual dfDeficit comment out when a new download is needed -Finsih comment 
 
 
+# page defaults:
+st.set_page_config(layout="wide")
 
+st.title("USA Reality Project")
+
+# Make tabs containers so it views better on mobile phones
+tab1, tab2, tab3, = st.tabs(["📊 National Debt", "📉 Annual Deficit", "📖 Get Learnt (FAQ)"])
 
 # Create a custom container with a different background color
-st.markdown(
-    """
-    <div style="background-color:#f2f2f2; padding: 20px; border-radius: 10px; text-align: center;">
-        <h1 style="color: #1f77b4;">Welcome To JQTs369 First App!</h1>
-        <h2 style="color: #ff6347;">History of America's Debt & Surplus/Deficits.</h2>
-    </div>
-    """, 
-    unsafe_allow_html=True
-)
+# st.markdown(
+#     """
+#     <div style="background-color:#f2f2f2; padding: 20px; border-radius: 10px; text-align: center;">
+#         <h1 style="color: #1f77b4;">Welcome To JQTs369 First App!</h1>
+#         <h2 style="color: #ff6347;">History of America's Debt & Surplus/Deficits.</h2>
+#     </div>
+#     """,
+#     unsafe_allow_html=True
+# )
 
 # Add vertical space after the container
 st.markdown("<br>", unsafe_allow_html=True)
@@ -70,7 +69,7 @@ viewType = st.sidebar.radio('President/Year Selection:', ['President','Year'])
 
 st.markdown(
     f"""
-    <h1 style='text-align: center;'>You Selected {viewType}</h1>
+    <h1 style='text-align: center;'>President Selected: {viewType}</h1>
     """, 
     unsafe_allow_html=True
 )
