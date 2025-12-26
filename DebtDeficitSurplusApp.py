@@ -68,37 +68,57 @@ with tab1:
         president = st.selectbox("Choose a President", dfPresidents['name'],
                                  index=dfPresidents['name'].tolist().index("Bill Clinton"))
 
-        pData = dfPresidents[dfPresidents['name'] == president].iloc[0]
-        sY, eY = int(pData['start_year']), int(pData['end_year'])
+        president_data = dfPresidents[dfPresidents['name'] == president].iloc[0]
+        start_year, end_year = int(president_data['start_year']), int(president_data['end_year'])
 
-        dData = dfDebt[(dfDebt['record_fiscal_year'] >= sY) & (dfDebt['record_fiscal_year'] <= eY)]
-        defData = dfDeficit[(dfDeficit['Fiscal Year'] >= sY) & (dfDeficit['Fiscal Year'] <= eY)]
+        debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= start_year) & (dfDebt['record_fiscal_year'] <= end_year)]
+        deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= start_year) & (dfDeficit['Fiscal Year'] <= end_year)]
 
-        merger = pd.merge(dData, defData, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
-        cData = pd.DataFrame({
+        merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
+        combined_data = pd.DataFrame({
             'Year': merger['record_fiscal_year'].astype(int),
             'Debt': merger['debt_outstanding_amt'],
             'Deficit': merger['Surplus or Deficit(-) Total']
         })
 
         # Metrics
-        st.markdown(f"### {president}'s Fiscal Snapshot ({sY} - {eY})")
-        b_d = cData[cData['Year'] == sY]['Debt'].iloc[0] if not cData[cData['Year'] == sY].empty else 0
-        e_d = cData[cData['Year'] == eY]['Debt'].iloc[0] if not cData[cData['Year'] == eY].empty else 0
+        st.markdown(f"### {president}'s Fiscal Snapshot ({start_year} - {end_year})")
+        beginning_debt = combined_data[combined_data['Year'] == start_year]['Debt'].iloc[0] if not combined_data[combined_data['Year'] == start_year].empty else 0
+        ending_debt = combined_data[combined_data['Year'] == end_year]['Debt'].iloc[0] if not combined_data[combined_data['Year'] == end_year].empty else 0
+        
+        # Cumulative = the total amount of overspending over the whole term
+        cumulative_deficit = combined_data['Deficit'].sum()
+        beginning_deficit = combined_data[combined_data['Year'] == start_year]['Deficit'].iloc[0] if not combined_data[
+            combined_data['Year'] == start_year].empty else 0
+        ending_deficit = combined_data[combined_data['Year'] == end_year]['Deficit'].iloc[0] if not combined_data[
+            combined_data['Year'] == end_year].empty else 0
+        deficit_growth = ending_deficit - beginning_deficit
 
+        # Row 1: The Debt (The "Total Bill")
+        st.write("**National Debt Progress**")
         m1, m2, m3 = st.columns(3)
         m1.metric("Debt at Start", format_large_number(b_d))
         m2.metric("Debt at End", format_large_number(e_d))
-        m3.metric("Total Change", format_large_number(e_d - b_d), delta=format_large_number(e_d - b_d),
-                  delta_color="inverse")
+        m3.metric("Total Debt Increase", format_large_number(total_debt_change),
+                  delta=format_large_number(total_debt_change), delta_color="inverse")
+
+        # Row 2: The Deficit (The "Annual Overspending")
+        st.write("**Annual Deficit & Cumulative Spending**")
+        m4, m5, m6 = st.columns(3)
+        m4.metric("Annual Deficit (Start)", format_large_number(beg_def))
+        m5.metric("Annual Deficit (End)", format_large_number(end_def),
+                  delta=format_large_number(deficit_growth), delta_color="inverse")
+        m6.metric("Total Term Overspending", format_large_number(cumulative_deficit))
+
+        st.divider()
 
         # Plot
         fig = go.Figure()
         fig.add_trace(
-            go.Scatter(x=cData['Year'], y=cData['Debt'], name='Total Debt', line=dict(color='#FFD700', width=4),
+            go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Total Debt', line=dict(color='#FFD700', width=4),
                        yaxis='y1'))
         fig.add_trace(
-            go.Bar(x=cData['Year'], y=cData['Deficit'], name='Annual Deficit/Surplus', marker=dict(color='#2E86C1'),
+            go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Annual Deficit/Surplus', marker=dict(color='#2E86C1'),
                    opacity=0.6, yaxis='y2'))
         fig.update_layout(template='plotly_dark', hovermode='x unified', height=500,
                           yaxis2=dict(overlaying='y', side='right'))
@@ -113,19 +133,19 @@ with tab1:
 
         st.subheader(f"Historical Analysis: {y_range[0]} - {y_range[1]}")
 
-        dData = dfDebt[(dfDebt['record_fiscal_year'] >= y_range[0]) & (dfDebt['record_fiscal_year'] <= y_range[1])]
-        defData = dfDeficit[(dfDeficit['Fiscal Year'] >= y_range[0]) & (dfDeficit['Fiscal Year'] <= y_range[1])]
+        debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= y_range[0]) & (dfDebt['record_fiscal_year'] <= y_range[1])]
+        deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= y_range[0]) & (dfDeficit['Fiscal Year'] <= y_range[1])]
 
-        merger = pd.merge(dData, defData, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
-        cData = pd.DataFrame({
+        merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
+        combined_data = pd.DataFrame({
             'Year': merger['record_fiscal_year'].astype(int),
             'Debt': merger['debt_outstanding_amt'],
             'Deficit': merger['Surplus or Deficit(-) Total']
         })
 
         try:
-            b_val = cData[cData['Year'] == y_range[0]]['Debt'].iloc[0]
-            e_val = cData[cData['Year'] == y_range[1]]['Debt'].iloc[0]
+            b_val = combined_data[combined_data['Year'] == y_range[0]]['Debt'].iloc[0]
+            e_val = combined_data[combined_data['Year'] == y_range[1]]['Debt'].iloc[0]
             m1, m2, m3 = st.columns(3)
             m1.metric("Starting Debt", format_large_number(b_val))
             m2.metric("Ending Debt", format_large_number(e_val))
@@ -135,9 +155,9 @@ with tab1:
             st.info("Expand year range for metrics")
 
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=cData['Year'], y=cData['Debt'], name='Debt', line=dict(color='yellow'), yaxis='y1'))
+        fig.add_trace(go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Debt', line=dict(color='yellow'), yaxis='y1'))
         fig.add_trace(
-            go.Bar(x=cData['Year'], y=cData['Deficit'], name='Deficit', marker=dict(color='#2E86C1'), yaxis='y2'))
+            go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Deficit', marker=dict(color='#2E86C1'), yaxis='y2'))
         fig.update_layout(template='plotly_dark', hovermode='x unified', height=500,
                           yaxis2=dict(overlaying='y', side='right'))
         st.plotly_chart(fig, use_container_width=True)
