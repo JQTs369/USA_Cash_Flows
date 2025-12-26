@@ -33,6 +33,24 @@ def load_data():
     deficit['Surplus or Deficit(-) Total'] = deficit['Surplus or Deficit(-) Total'] * 1_000_000
     return debt, presidents, deficit
 
+# Function to format large numbers with appropriate labels (Million, Billion, Trillion)
+def format_large_number(value):
+
+    if value is None or math.isnan(value):
+        return "No Data"
+
+    sign = '-' if value < 0 else ""
+    value = abs(value)
+
+    if value >= 1e12:
+        return f"{sign}${value / 1e12:,.2f} Trillion"
+    elif value >= 1e9:
+        return f"{sign}${value / 1e9:,.2f} Billion"
+    elif value >= 1e6:
+        return f"{sign}${value / 1e6:,.2f} Million"
+    else:
+        return f"{sign}${value:,.2f}"
+
 
 dfDebt, dfPresidents, dfDeficit = load_data()
 
@@ -173,23 +191,7 @@ elif viewType == 'Year':
     # Display the selected year range
     st.write(f"Selected Year Range: {selected_years[0]} - {selected_years[1]}")
 
-    # Function to format large numbers with appropriate labels (Million, Billion, Trillion)
-    def format_large_number(value):
-        
-        if value is None or math.isnan(value):
-            return "No Data"
-            
-        sign = '-' if value < 0 else ""
-        value = abs(value)
-        
-        if value >= 1e12:
-            return f"{sign}${value / 1e12:,.2f} Trillion"
-        elif value >= 1e9:
-            return f"{sign}${value / 1e9:,.2f} Billion"
-        elif value >= 1e6:
-            return f"{sign}${value / 1e6:,.2f} Million"
-        else:
-            return f"{sign}${value:,.2f}"
+
 
     # Function to format the table with alternating row colors (dark blue and white text)
     def color_alternating_rows(df):
