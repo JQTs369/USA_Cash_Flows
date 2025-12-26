@@ -1,5 +1,6 @@
 # --- Imports ---
 import streamlit as st
+from streamlit_gsheets import GSheetsConnection
 import plotly.graph_objects as go
 from AmericanRealityClasses import TreasuryApi as TA
 import pandas as pd
@@ -50,39 +51,53 @@ def load_data():
     deficit['Surplus or Deficit(-) Total'] = deficit['Surplus or Deficit(-) Total'] * 1_000_000
     return debt, presidents, deficit
 
-
+# 3. Page Config
+st.set_page_config(page_title="USA Reality Project", layout="wide")
+st.title("USA Cash Flows")
+st.caption("Visualizing America's National Debt and Fiscal History")
 
 
 dfDebt, dfPresidents, dfDeficit = load_data()
-# 3. Donation Tracker
-    # --- 1. THE REVENUE/EXPENSE TRACKER ---
-# For now, we'll use manual numbers. Later, we link this to your Google Sheet.
-total_donations = 150.00
-total_expenses = 45.00
+# 4. LIVE DONATION & EXPENSE TRACKER ---
+# Replace this URL with your actual Google Sheet Share Link
+spreadsheet_url = "https://docs.google.com/spreadsheets/d/1Cma1Wdk4yYLq5fiPDG5YCythxEwYnqBPh0Zplro3mD4/edit?usp=sharing"
+
+# Create the connection
+conn = st.connection("gsheets", type=GSheetsConnection)
+
+# Read the two tabs (Donations and Expenses)
+# We set ttl=3600 so it only checks for new money once an hour (saves API calls)
+try:
+    df_donations_live = conn.read(spreadsheet=spreadsheet_url, worksheet="Donations", ttl=3600)
+    df_expenses_live = conn.read(spreadsheet=spreadsheet_url, worksheet="Expenses", ttl=3600)
+
+    total_donations = df_donations_live['Amount'].sum()
+    total_expenses = df_expenses_live['Amount'].sum()
+except Exception:
+    # Fallback if the sheet is empty or link is broken
+    total_donations = 0.00
+    total_expenses = 0.00
+
 net_balance = total_donations - total_expenses
 
-    # --- 2. THE TOP RIGHT HEADER ---
-# We create 3 columns: One huge one for the title, and two small ones for metrics
+    # --- THE HEADER DISPLAY ---
 head_col1, head_col2, head_col3 = st.columns([4, 1, 1])
 
 with head_col1:
+    # Use your custom logo here later!
     st.title("The American Reality Project")
 
 with head_col2:
     st.metric("Total Donations", f"${total_donations:,.2f}")
 
 with head_col3:
+    # 'Inverse' means red is bad and green is good.
+    # Since this is a balance, it'll show your 'burn rate' as the delta.
     st.metric("Project Balance", f"${net_balance:,.2f}",
-              delta=f"-${total_expenses} spent", delta_color="normal")
+              delta=f"-${total_expenses:,.2f} costs", delta_color="normal")
 
 st.divider()
 
-# 4. Page Config
-st.set_page_config(page_title="USA Reality Project", layout="wide")
-
-
-st.title("USA Cash Flows")
-st.caption("Visualizing America's National Debt and Fiscal History")
 
 # 5. Navigation
 viewType = st.pills("Analysis View", ["President", "Year"], selection_mode="single", default="President")
