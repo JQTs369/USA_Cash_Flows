@@ -63,11 +63,29 @@ tab1, tab2 = st.tabs(["📊 Data Analysis", "📖 Get Learnt (FAQ)"])
 
 with tab1:
     if viewType == "President":
-        st.subheader("Presidential Fiscal Analysis")
-        # Selector on the main page
-        president = st.selectbox("Choose a President", dfPresidents['name'],
-                                 index=dfPresidents['name'].tolist().index("Bill Clinton"))
+        # --- 1. SESSION STATE INITIALIZATION ---
+        # This keeps your choice from resetting to index 0
+        if 'selected_pres' not in st.session_state:
+            st.session_state.selected_pres = "Bill Clinton"
 
+        # --- 2. PRESIDENT SELECTOR ---
+        st.subheader("Presidential Fiscal Analysis")
+
+
+        # Callback to save selection
+        def update_pres():
+            st.session_state.selected_pres = st.session_state.temp_pres
+
+
+        president = st.selectbox(
+            "Choose a President",
+            dfPresidents['name'],
+            index=dfPresidents['name'].tolist().index(st.session_state.selected_pres),
+            key="temp_pres",
+            on_change=update_pres
+        )
+
+        # --- 3. DATA FILTERING ---
         president_data = dfPresidents[dfPresidents['name'] == president].iloc[0]
         start_year, end_year = int(president_data['start_year']), int(president_data['end_year'])
 
@@ -81,26 +99,24 @@ with tab1:
             'Deficit': merger['Surplus or Deficit(-) Total']
         })
 
-        # Metrics
+        # --- 4. CALCULATIONS ---
         st.markdown(f"### {president}'s Fiscal Snapshot ({start_year} - {end_year})")
 
+        # Safety checks for empty data
         beginning_debt = combined_data[combined_data['Year'] == start_year]['Debt'].iloc[0] if not combined_data[
             combined_data['Year'] == start_year].empty else 0
         ending_debt = combined_data[combined_data['Year'] == end_year]['Debt'].iloc[0] if not combined_data[
             combined_data['Year'] == end_year].empty else 0
-
-        # ADD THIS LINE:
         total_debt_change = ending_debt - beginning_debt
 
-        # Cumulative = the total amount of overspending over the whole term
-        cumulative_deficit = combined_data['Deficit'].sum()
         beginning_deficit = combined_data[combined_data['Year'] == start_year]['Deficit'].iloc[0] if not combined_data[
             combined_data['Year'] == start_year].empty else 0
         ending_deficit = combined_data[combined_data['Year'] == end_year]['Deficit'].iloc[0] if not combined_data[
             combined_data['Year'] == end_year].empty else 0
         deficit_growth = ending_deficit - beginning_deficit
+        cumulative_deficit = combined_data['Deficit'].sum()
 
-        # Row 1: The Debt (The "Total Bill")
+        # --- 5. METRICS (The Fix for Red/Green logic) ---
         st.write("**National Debt Progress**")
         m1, m2, m3 = st.columns(3)
         m1.metric("Debt at Start", format_large_number(beginning_debt))
@@ -108,31 +124,35 @@ with tab1:
         m3.metric("Total Debt Increase", format_large_number(total_debt_change),
                   delta=format_large_number(total_debt_change), delta_color="inverse")
 
-        # Row 2: The Deficit (The "Annual Overspending")
         st.write("**Annual Deficit & Cumulative Spending**")
+        # Dynamic label: says 'Surplus' if the number is positive
+        def_label = "Annual Surplus (End)" if ending_deficit > 0 else "Annual Deficit (End)"
+
         m4, m5, m6 = st.columns(3)
         m4.metric("Annual Deficit (Start)", format_large_number(beginning_deficit))
-        m5.metric("Annual Deficit (End)",
+        m5.metric(def_label,
                   format_large_number(ending_deficit),
                   delta=format_large_number(deficit_growth),
-                  delta_color="normal")
+                  delta_color="normal")  # Green if move toward surplus
         m6.metric("Total Term Overspending", format_large_number(cumulative_deficit))
 
         st.divider()
 
-        # Plot
+        # --- 6. PLOTTING ---
         fig = go.Figure()
-        fig.add_trace(
-            go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Total Debt', line=dict(color='#FFD700', width=4),
-                       yaxis='y1'))
-        fig.add_trace(
-            go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Annual Deficit/Surplus', marker=dict(color='#2E86C1'),
-                   opacity=0.6, yaxis='y2'))
-        fig.update_layout(template='plotly_dark', hovermode='x unified', height=500,
-                          yaxis2=dict(overlaying='y', side='right'))
+        fig.add_trace(go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Total Debt',
+                                 line=dict(color='#FFD700', width=4), yaxis='y1'))
+        fig.add_trace(go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Deficit/Surplus',
+                             marker=dict(color='#2E86C1'), opacity=0.6, yaxis='y2'))
+
+        fig.update_layout(
+            template='plotly_dark',
+            hovermode='x unified',
+            height=500,
+            margin=dict(l=10, r=10, t=20, b=10),
+            yaxis2=dict(overlaying='y', side='right')
+        )
         st.plotly_chart(fig, use_container_width=True)
-
-
 
 
     else:
