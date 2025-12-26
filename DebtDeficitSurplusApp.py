@@ -121,6 +121,17 @@ with tab1:
         deficit_growth = ending_deficit - beginning_deficit
         cumulative_deficit = combined_data['Deficit'].sum()
 
+        # --- 4.5 'WHAT IF' CALCULATION ---
+        term_length = end_year - start_year
+
+        # If they stayed at the 'Inherited' deficit level every year:
+        hypothetical_total_deficit = beginning_deficit * term_length
+        hypothetical_ending_debt = beginning_debt - hypothetical_total_deficit
+        # (Note: we subtract because deficit is a negative number in your data)
+
+        # The "Responsibility Gap" (Difference between reality and the inherited path)
+        responsibility_gap = ending_debt - hypothetical_ending_debt
+
         # --- 5. METRICS (The Fix for Red/Green logic) ---
         st.write("**National Debt Progress**")
         m1, m2, m3 = st.columns(3)
@@ -140,6 +151,19 @@ with tab1:
                   delta=format_large_number(deficit_growth),
                   delta_color="normal")  # Green if move toward surplus
         m6.metric("Total Term Overspending", format_large_number(cumulative_deficit))
+
+        st.write("---")
+        st.markdown("### ⚖️ The Inherited Path")
+        c1, c2 = st.columns(2)
+
+        with c1:
+            st.write(
+                f"If {president} maintained the **inherited** deficit of {format_large_number(beginning_deficit)}/year:")
+            st.metric("Hypothetical Debt", format_large_number(hypothetical_ending_debt))
+
+        with c2:
+            st.write(f"Actual debt was {format_large_number(responsibility_gap)} higher than the inherited path.")
+            st.metric("Policy/Economy Impact", format_large_number(responsibility_gap), delta_color="inverse")
 
         st.divider()
 
