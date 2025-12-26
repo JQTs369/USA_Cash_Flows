@@ -59,35 +59,34 @@ st.caption("Visualizing America's National Debt and Fiscal History")
 # bring in our data
 dfDebt, dfPresidents, dfDeficit = load_data()
 
+# --- 4. LIVE DONATION & EXPENSE TRACKER ---
+# Use the export format to get the data directly as a CSV
+sheet_id = "1Cma1Wdk4yYLq5fiPDG5YCythxEwYnqBPh0Zplro3mD4"
+donations_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=Donations"
+expenses_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=Expenses"
 
-# 4. LIVE DONATION & EXPENSE TRACKER ---
-# Google URL ledger link
-spreadsheet_url = "https://docs.google.com/spreadsheets/d/1Cma1Wdk4yYLq5fiPDG5YCythxEwYnqBPh0Zplro3mD4/"
 
-# Create the connection
-conn = st.connection("gsheets", type=GSheetsConnection)
+@st.cache_data(ttl=60)  # Only check the sheet once per minute
+def get_ledger_data():
+    try:
+        df_donations = pd.read_csv(donations_url)
+        df_expenses = pd.read_csv(expenses_url)
 
-# Read the two tabs (Donations and Expenses)
-# We set ttl=3600 so it only checks for new money once an hour (saves API calls)
-try:
-    # 1. Set ttl=0 so it updates EVERY time you refresh while we debug
-    df_donations_live = conn.read(spreadsheet=spreadsheet_url, worksheet="Donations", ttl=0)
-    df_expenses_live = conn.read(spreadsheet=spreadsheet_url, worksheet="Expenses", ttl=0)
+        # Clean column names (removes spaces/quotes)
+        df_donations.columns = df_donations.columns.str.strip()
+        df_expenses.columns = df_expenses.columns.str.strip()
 
-    # 2. Ensure columns are cleaned (removes accidental spaces)
-    df_donations_live.columns = df_donations_live.columns.str.strip()
-    df_expenses_live.columns = df_expenses_live.columns.str.strip()
+        d_total = pd.to_numeric(df_donations['Amount']).sum()
+        e_total = pd.to_numeric(df_expenses['Amount']).sum()
 
-    # 3. Sum the Amount column
-    total_donations = pd.to_numeric(df_donations_live['Amount']).sum()
-    total_expenses = pd.to_numeric(df_expenses_live['Amount']).sum()
+        return df_donations, df_expenses, d_total, e_total
+    except Exception as e:
+        # If it fails, return empty frames and $0
+        return pd.DataFrame(), pd.DataFrame(), 0.0, 0.0
 
-except Exception as e:
-    # This will now show you the ACTUAL error in the app if it fails
-    st.error(f"GSheet Error: {e}")
-    total_donations = 0.00
-    total_expenses = 0.00
 
+# Execute the loading
+df_donations_live, df_expenses_live, total_donations, total_expenses = get_ledger_data()
 net_balance = total_donations - total_expenses
 
     # --- THE HEADER DISPLAY ---
