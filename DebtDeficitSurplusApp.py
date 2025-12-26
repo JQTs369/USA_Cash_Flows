@@ -54,7 +54,7 @@ dfDebt, dfPresidents, dfDeficit = load_data()
 st.set_page_config(page_title="USA Reality Project", layout="wide")
 # Add your banner (Replace 'banner.jpg' with your filename or a URL)
 # Use use_container_width=True to make it stretch
-st.image(r"resources\IMG_1335.jpg", use_container_width=True)
+st.image("resources\IMG_1335.jpg", use_container_width=True)
 
 st.title("USA Cash Flows")
 st.caption("Visualizing America's National Debt and Fiscal History")
