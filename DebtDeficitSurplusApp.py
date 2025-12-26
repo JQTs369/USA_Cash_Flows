@@ -61,8 +61,8 @@ dfDebt, dfPresidents, dfDeficit = load_data()
 
 
 # 4. LIVE DONATION & EXPENSE TRACKER ---
-# Replace this URL with your actual Google Sheet Share Link
-spreadsheet_url = "https://docs.google.com/spreadsheets/d/1Cma1Wdk4yYLq5fiPDG5YCythxEwYnqBPh0Zplro3mD4/edit?usp=sharing"
+# Google URL ledger link
+spreadsheet_url = "https://docs.google.com/spreadsheets/d/1Cma1Wdk4yYLq5fiPDG5YCythxEwYnqBPh0Zplro3mD4/"
 
 # Create the connection
 conn = st.connection("gsheets", type=GSheetsConnection)
@@ -70,13 +70,21 @@ conn = st.connection("gsheets", type=GSheetsConnection)
 # Read the two tabs (Donations and Expenses)
 # We set ttl=3600 so it only checks for new money once an hour (saves API calls)
 try:
-    df_donations_live = conn.read(spreadsheet=spreadsheet_url, worksheet="Donations", ttl=3600)
-    df_expenses_live = conn.read(spreadsheet=spreadsheet_url, worksheet="Expenses", ttl=3600)
+    # 1. Set ttl=0 so it updates EVERY time you refresh while we debug
+    df_donations_live = conn.read(spreadsheet=spreadsheet_url, worksheet="Donations", ttl=0)
+    df_expenses_live = conn.read(spreadsheet=spreadsheet_url, worksheet="Expenses", ttl=0)
 
-    total_donations = df_donations_live['Amount'].sum()
-    total_expenses = df_expenses_live['Amount'].sum()
-except Exception:
-    # Fallback if the sheet is empty or link is broken
+    # 2. Ensure columns are cleaned (removes accidental spaces)
+    df_donations_live.columns = df_donations_live.columns.str.strip()
+    df_expenses_live.columns = df_expenses_live.columns.str.strip()
+
+    # 3. Sum the Amount column
+    total_donations = pd.to_numeric(df_donations_live['Amount']).sum()
+    total_expenses = pd.to_numeric(df_expenses_live['Amount']).sum()
+
+except Exception as e:
+    # This will now show you the ACTUAL error in the app if it fails
+    st.error(f"GSheet Error: {e}")
     total_donations = 0.00
     total_expenses = 0.00
 
