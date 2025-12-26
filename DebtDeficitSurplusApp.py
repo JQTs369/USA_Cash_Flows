@@ -142,10 +142,10 @@ with tab1:
 
         # 2. Initialize Session State ONLY IF NOT ALREADY THERE
         if 'start_y' not in st.session_state:
-            st.session_state.start_y = 1982
+            st.session_state.start_y = 1992
 
         if 'end_y' not in st.session_state:
-            st.session_state.end_y = 2022
+            st.session_state.end_y = 2001
 
         if 'y_slider' not in st.session_state:
             st.session_state.y_slider = (1982, 2022)
@@ -158,29 +158,33 @@ with tab1:
             st.session_state.start_y = st.session_state.y_slider[0]
             st.session_state.end_y = st.session_state.y_slider[1]
 
+            # 4. The UI Controls (Synchronized Widgets)
+            # We put these in a container to keep them grouped
+            with st.container():
+                col_left, col_mid, col_right = st.columns([1, 3, 1])
 
-        # 4. The UI (Removed 'value=' to stop the warning)
-        col_left, col_mid, col_right = st.columns([1, 3, 1])
-        with col_left:
-            st.number_input("Start Year", min_selectable, max_selectable,
-                            key="start_y", on_change=update_slider)
+                with col_left:
+                    st.number_input("Start Year", min_selectable, max_selectable,
+                                    key="start_y", on_change=update_slider)
 
-        with col_mid:
-            st.write("##")
-            st.slider("Range", min_selectable, max_selectable,
-                      key="y_slider", on_change=update_inputs, label_visibility="collapsed")
+                with col_mid:
+                    st.write("##")
+                    st.slider("Range", min_selectable, max_selectable,
+                              key="y_slider", on_change=update_inputs, label_visibility="collapsed")
 
-        with col_right:
-            st.number_input("End Year", min_selectable, max_selectable,
+                with col_right:
+                    st.number_input("End Year", min_selectable, max_selectable,
+                                    key="end_y", on_change=update_slider)
 
-                            key="end_y", on_change=update_slider)
+            # --- THE DIVIDER ---
+            st.divider()
 
             # 5. Data Filtering using the live state
             y_low, y_high = st.session_state.y_slider
             debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= y_low) & (dfDebt['record_fiscal_year'] <= y_high)]
             deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= y_low) & (dfDeficit['Fiscal Year'] <= y_high)]
 
-            # 6. Your Original Merger Logic
+            # 6. Merger Logic
             merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year',
                               how='outer')
             combined_data = pd.DataFrame({
@@ -190,35 +194,57 @@ with tab1:
             })
 
             # --- Metrics Section ---
-            try:
-                # Changed y_range[0] to y_low and y_range[1] to y_high
-                b_val = combined_data[combined_data['Year'] == y_low]['Debt'].iloc[0]
-                e_val = combined_data[combined_data['Year'] == y_high]['Debt'].iloc[0]
+            # This now sits outside the columns, so it will span the full page width
+            st.subheader(f"Fiscal Snapshot: {y_low} - {y_high}")
 
-                m1, m2, m3 = st.columns(3)
-                m1.metric("Starting Debt", format_large_number(b_val))
-                m2.metric("Ending Debt", format_large_number(e_val))
-                m3.metric("Change", format_large_number(e_val - b_val),
-                          delta=format_large_number(e_val - b_val),
-                          delta_color="inverse")
-            except:
+            try:
+                # Debt Metrics
+                beginning_debt = combined_data[combined_data['Year'] == y_low]['Debt'].iloc[0]
+                ending_debt = combined_data[combined_data['Year'] == y_high]['Debt'].iloc[0]
+                total_debt_change = ending_debt - beginning_debt
+
+                # Deficit Metrics
+                cumulative_deficit = combined_data['Deficit'].sum()
+                beginning_deficit = combined_data[combined_data['Year'] == y_low]['Deficit'].iloc[0]
+                ending_deficit = combined_data[combined_data['Year'] == y_high]['Deficit'].iloc[0]
+                deficit_growth = ending_deficit - beginning_deficit
+
+                # Visual Metrics
+                m_col1, m_col2, m_col3 = st.columns(3)
+                with m_col1:
+                    st.metric("Debt at Start", format_large_number(beginning_debt))
+                    st.metric("Annual Deficit (Start)", format_large_number(beginning_deficit))
+                with m_col2:
+                    st.metric("Debt at End", format_large_number(ending_debt))
+                    st.metric("Annual Deficit (End)", format_large_number(ending_deficit),
+                              delta=format_large_number(deficit_growth), delta_color="inverse")
+                with m_col3:
+                    st.metric("Total Debt Increase", format_large_number(total_debt_change),
+                              delta=format_large_number(total_debt_change), delta_color="inverse")
+                    st.metric("Cumulative Overspending", format_large_number(cumulative_deficit))
+
+            except Exception as e:
                 st.info("Adjust the range to see metrics (Ensure both start and end years have data).")
 
+            # --- ANOTHER DIVIDER ---
+            st.divider()
+
             # --- Graph Section ---
+            # use_container_width=True ensures it pushes to the far right edges
             fig = go.Figure()
-            fig.add_trace(
-                go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Debt', line=dict(color='yellow'),
-                           yaxis='y1'))
-            fig.add_trace(
-                go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Deficit',
-                       marker=dict(color='#2E86C1'), yaxis='y2'))
+            fig.add_trace(go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Debt',
+                                     line=dict(color='#FFD700', width=4), yaxis='y1'))
+            fig.add_trace(go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Deficit',
+                                 marker=dict(color='#2E86C1'), opacity=0.6, yaxis='y2'))
 
             fig.update_layout(
                 template='plotly_dark',
                 hovermode='x unified',
-                height=500,
-                yaxis=dict(title="Total Debt"),
-                yaxis2=dict(title="Annual Deficit", overlaying='y', side='right')
+                height=600,
+                margin=dict(l=10, r=10, t=50, b=10),  # Tightens the white space around the chart
+                yaxis=dict(title="Total Debt ($)", side="left"),
+                yaxis2=dict(title="Annual Deficit ($)", overlaying='y', side='right'),
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
             )
             st.plotly_chart(fig, use_container_width=True)
 
