@@ -25,12 +25,15 @@ def format_large_number(value):
 # 2. Data Loading
 @st.cache_data # so we do not load the data on every click
 def load_data():
+    # TODO make a timer to download this once tax policy updates their site
+    # getTaxPolicyDownload() in TA class
     dfInstance = TA.Treasury()
     BaseUrl = r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding'
     debt = dfInstance.getHistoricalDebtAPIData(BaseUrl)
     presidents = pd.read_json('AmericanRealityClasses/resources/USAPresidents.json')
-    path = 'AmericanRealityClasses/resources/TaxPolicyCentrHistoricRevenues.xlsx'
-    deficit = pd.read_excel(path, engine='openpyxl', skiprows=6)
+
+    historic_revenues_path = 'AmericanRealityClasses/resources/TaxPolicyCentrHistoricRevenues.xlsx'
+    deficit = pd.read_excel(historic_revenues_path, engine='openpyxl', skiprows=6)
     deficit = deficit.drop(0)
     deficit.rename(columns={
         "Unnamed: 0": "Fiscal Year",
@@ -48,18 +51,42 @@ def load_data():
     return debt, presidents, deficit
 
 
-dfDebt, dfPresidents, dfDeficit = load_data()
 
-# 3. Page Config
+
+dfDebt, dfPresidents, dfDeficit = load_data()
+# 3. Donation Tracker
+    # --- 1. THE REVENUE/EXPENSE TRACKER ---
+# For now, we'll use manual numbers. Later, we link this to your Google Sheet.
+total_donations = 150.00
+total_expenses = 45.00
+net_balance = total_donations - total_expenses
+
+    # --- 2. THE TOP RIGHT HEADER ---
+# We create 3 columns: One huge one for the title, and two small ones for metrics
+head_col1, head_col2, head_col3 = st.columns([4, 1, 1])
+
+with head_col1:
+    st.title("The American Reality Project")
+
+with head_col2:
+    st.metric("Total Donations", f"${total_donations:,.2f}")
+
+with head_col3:
+    st.metric("Project Balance", f"${net_balance:,.2f}",
+              delta=f"-${total_expenses} spent", delta_color="normal")
+
+st.divider()
+
+# 4. Page Config
 st.set_page_config(page_title="USA Reality Project", layout="wide")
 # Add your banner (Replace 'banner.jpg' with your filename or a URL)
 # Use use_container_width=True to make it stretch
-# st.image("resources\IMG_1335.jpg", use_container_width=True) #TODO: try to get this banner to work
+st.image("AmericanRealityClasses/resources\IMG_1335.jpg", use_container_width=True) #TODO: try to get this banner to work
 
 st.title("USA Cash Flows")
 st.caption("Visualizing America's National Debt and Fiscal History")
 
-# 4. Navigation
+# 5. Navigation
 viewType = st.pills("Analysis View", ["President", "Year"], selection_mode="single", default="President")
 st.divider()
 
@@ -211,7 +238,7 @@ with tab1:
             st.session_state.end_y = 2001
 
         if 'y_slider' not in st.session_state:
-            st.session_state.y_slider = (1992, 2001)
+            st.session_state.y_slider = (1993, 2001)
 
         # 3. Synchronizing Functions
         def update_slider():

@@ -1,2 +1,2 @@
-# USA Reality Project Get Learnt
+# USA Reality Project
 Random America Stats
