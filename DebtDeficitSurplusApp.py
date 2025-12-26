@@ -336,7 +336,7 @@ with tab2:
     st.info("This project is 100% independent. No ads, no corporate sponsors. Just data.")
 
     # Check if we have a username, otherwise show a "Coming Soon" state
-    bmac_user = "YOUR_USERNAME"
+    bmac_user = "jqts369"
     if bmac_user == "YOUR_USERNAME":
         st.warning(
             "🚧 **Donation Portal Coming Soon:** I am currently setting up a dedicated project account to keep these funds 100% separate from personal assets.")
