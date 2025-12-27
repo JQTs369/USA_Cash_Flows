@@ -383,8 +383,25 @@ with tab2:
         > Once live, this section will show real-time audits of every dollar received and spent.
         """)
 
-
 with tab3:
+    st.header("📖 The Mission: Clarity Over Conflict")
+
+    st.markdown("""
+    ### Why I built this
+    Fiscal data is often weaponized to support a specific narrative. My goal with the **USA Reality Project** is to provide a tool that lets the numbers speak for themselves, without the "spin."
+
+    ### The Methodology
+    * **Raw Data:** We pull directly from the [Treasury's Fiscal Data API](https://fiscaldata.treasury.gov/).
+    * **Fair Comparison:** By using the **Inherited Path** metric, we acknowledge that no President starts with a clean slate. Every leader is handed a "momentum" of debt and deficit that they must manage.
+    * **Independent:** This project is self-funded and user-supported. We don't answer to any party or organization.
+
+    ### How to read the charts
+    * **Gold Line:** Total National Debt Outstanding.
+    * **Blue Bars:** Annual Surplus or Deficit (Overspending/Under-spending per year).
+    """)
+
+    st.divider()
+
     st.header("Data Sources & FAQ")
 
     st.markdown("""
