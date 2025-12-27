@@ -36,12 +36,14 @@ def load_data():
     historic_revenues_path = 'AmericanRealityClasses/resources/TaxPolicyCentrHistoricRevenues.xlsx'
     deficit = pd.read_excel(historic_revenues_path, engine='openpyxl', skiprows=6)
     deficit = deficit.drop(0)
+
     deficit.rename(columns={
         "Unnamed: 0": "Fiscal Year",
         "Total": "Receipts Total",
         "Total.1": "Outlays Total",
         "Total.2": "Surplus or Deficit(-) Total"
     }, inplace=True)
+
     # Filter out estimates and clean TQ
     mask = deficit['Fiscal Year'].astype(str).str.contains('Estimates', case=False, na=False)
     estimateIndex = deficit[mask].index[0]
@@ -59,14 +61,14 @@ st.caption("Visualizing America's National Debt and Fiscal History")
 # bring in our data
 dfDebt, dfPresidents, dfDeficit = load_data()
 
-# --- 4. LIVE DONATION & EXPENSE TRACKER ---
+# --- 4. LIVE DONATION & EXPENSE TRACKER --- Google Sheets for now
 # Use the export format to get the data directly as a CSV
 sheet_id = "1Cma1Wdk4yYLq5fiPDG5YCythxEwYnqBPh0Zplro3mD4"
 donations_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=Donations"
 expenses_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=Expenses"
 
 
-@st.cache_data(ttl=60)  # Only check the sheet once per minute
+@st.cache_data(ttl=3600)  # Only check the sheet once per hour
 def get_ledger_data():
     try:
         df_donations = pd.read_csv(donations_url)
@@ -181,7 +183,7 @@ with tab1:
         # The "Responsibility Gap" (Difference between reality and the inherited path)
         responsibility_gap = ending_debt - hypothetical_ending_debt
 
-        # --- 5. METRICS (The Fix for Red/Green logic) ---
+        # --- 5. METRICS ---
         st.write("**National Debt Progress**")
         m1, m2, m3 = st.columns(3)
         m1.metric("Debt at Start", format_large_number(beginning_debt))
@@ -340,16 +342,21 @@ with tab1:
 with tab2:
     st.header("Project Transparency & Resources")
 
-    # 1. The Call to Action
-    st.info("This project is 100% independent. No ads, no corporate sponsors. Just data.")
-
-    # Check if we have a username, otherwise show a "Coming Soon" state
-    bmac_user = "jqts369"
-    if bmac_user == "YOUR_USERNAME":
-        st.warning(
-            "🚧 **Donation Portal Coming Soon:** I am currently setting up a dedicated project account to keep these funds 100% separate from personal assets.")
-    else:
-        st.link_button("☕ Support the Project", f"https://www.buymeacoffee.com/{bmac_user}")
+    # This creates a colored 'Announcement' style box
+    st.markdown(
+        """
+        <div style="background-color: #1e1e1e; padding: 20px; border-radius: 10px; border: 1px solid #3d3d3d; text-align: center;">
+            <h3 style="color: #FFD700; margin-top: 0;">☕ Support the Mission</h3>
+            <p style="color: #ffffff; font-size: 1.1em;">
+                This project is 100% independent. No ads, no corporate sponsors. Just raw data.
+            </p>
+            <p style="color: #888; font-style: italic;">
+                (Donation portal currently under maintenance while we finalize our non-personal bank link)
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
 
     st.divider()
 
