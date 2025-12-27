@@ -54,7 +54,12 @@ def load_data():
     return debt, presidents, deficit
 
 # 3. Page Config
-st.set_page_config(page_title="USA Reality Project", layout="wide")
+st.set_page_config(
+    page_title="USA Reality Project",
+    page_icon="🇺🇸",  # This shows the flag in the browser tab!
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 st.title("USA Cash Flows")
 st.caption("Visualizing America's National Debt and Fiscal History")
 
