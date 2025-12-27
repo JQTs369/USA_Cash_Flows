@@ -56,11 +56,20 @@ def load_data():
 # 3. Page Config
 st.set_page_config(
     page_title="USA Reality Project",
-    page_icon="🇺🇸",  # This shows the flag in the browser tab!
+    page_icon="https://cdn-icons-png.flaticon.com/512/197/197374.png",  # This shows the flag in the browser tab!
     layout="wide",
     initial_sidebar_state="expanded"
 )
-st.title("USA Cash Flows")
+# Create a visually "popping" header
+st.markdown(
+    """
+    <div style="text-align: left;">
+        <h1 style="color: #FFD700; margin-bottom: 0;">USA <span style="color: #ffffff;">CASH FLOWS</span></h1>
+        <p style="color: #888; font-size: 1.2em; margin-top: 0;">The American Reality Project</p>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 st.caption("Visualizing America's National Debt and Fiscal History")
 
 # bring in our data
@@ -183,7 +192,6 @@ with tab1:
         # If they stayed at the 'Inherited' deficit level every year:
         hypothetical_total_deficit = beginning_deficit * term_length
         hypothetical_ending_debt = beginning_debt - hypothetical_total_deficit
-        # (Note: we subtract because deficit is a negative number in your data)
 
         # The "Responsibility Gap" (Difference between reality and the inherited path)
         responsibility_gap = ending_debt - hypothetical_ending_debt
@@ -213,41 +221,82 @@ with tab1:
         comparison_word = "lower" if responsibility_gap < 0 else "higher"
 
         st.write("---")
-        st.markdown("### ⚖️ The Inherited Path")
+        st.markdown("### ⚖️ The Inherited Momentum")
+        st.caption(
+            "No President starts at zero. This section compares the path they were handed vs. what actually happened.")
+
         c1, c2 = st.columns(2)
 
         with c1:
-            surplus_or_deficit = 'deficit' if beginning_deficit < 0 else "surplus"
-            st.write(
-                f"If {president} maintained the **inherited** {surplus_or_deficit} of {format_large_number(beginning_deficit)}/year:")
-            st.metric("Hypothetical Debt", format_large_number(hypothetical_ending_debt))
+            # Explain the 'Starting Line'
+            status_word = "overspending (deficit)" if beginning_deficit < 0 else "surplus"
+            st.write(f"**The 'Stay the Course' Path**")
+            st.info(
+                f"If {president} simply kept the same annual {status_word} they inherited from the previous administration:")
+
+            st.metric("Predicted Debt", format_large_number(hypothetical_ending_debt))
 
         with c2:
-            # This dynamic text fixes the Bill Clinton "Double Negative" issue
-            st.write(
-                f"Actual debt ended up **{format_large_number(abs_diff)} {comparison_word}** than the inherited path.")
+            # Explain the 'Result'
+            st.write(f"**The Reality**")
 
-            # We use "normal" delta color here because for Clinton, a negative number is SUCCESS
-            st.metric("Policy/Economy Impact",
+            # Simple logic for the comparison sentence
+            if responsibility_gap < 0:
+                outcome_text = f"ended up **{format_large_number(abs_diff)} LOWER**"
+                delta_label = "Improved the Path"
+            else:
+                outcome_text = f"ended up **{format_large_number(abs_diff)} HIGHER**"
+                delta_label = "Added to the Path"
+
+            st.write(f"Under {president}, the national debt {outcome_text} than if they had just 'stayed the course.'")
+
+            st.metric("Net Fiscal Impact",
                       format_large_number(responsibility_gap),
-                      delta="Beat the Path" if responsibility_gap < 0 else "Added to Path",
+                      delta=delta_label,
                       delta_color="normal" if responsibility_gap < 0 else "inverse")
 
         st.divider()
 
         # --- 6. PLOTTING ---
         fig = go.Figure()
-        fig.add_trace(go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Total Debt',
-                                 line=dict(color='#FFD700', width=4), yaxis='y1'))
-        fig.add_trace(go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Deficit/Surplus',
-                             marker=dict(color='#2E86C1'), opacity=0.6, yaxis='y2'))
+
+        # 1. THE ACTUAL DEBT (Gold)
+        fig.add_trace(go.Scatter(
+            x=combined_data['Year'],
+            y=combined_data['Debt'],
+            name='Actual Debt',
+            line=dict(color='#FFD700', width=4),
+            yaxis='y1'
+        ))
+
+        # 2. THE INHERITED PATH (Silver Dashed)
+        # We create a simple two-point line: [Start Year, End Year] -> [Start Debt, Hypo End Debt]
+        fig.add_trace(go.Scatter(
+            x=[start_year, end_year],
+            y=[beginning_debt, hypothetical_ending_debt],
+            name='Inherited Path',
+            line=dict(color='#C0C0C0', width=2, dash='dot'),
+            yaxis='y1'
+        ))
+
+        # 3. THE DEFICIT BARS (Blue)
+        fig.add_trace(go.Bar(
+            x=combined_data['Year'],
+            y=combined_data['Deficit'],
+            name='Annual Deficit/Surplus',
+            marker=dict(color='#2E86C1'),
+            opacity=0.4,
+            yaxis='y2'
+        ))
 
         fig.update_layout(
             template='plotly_dark',
             hovermode='x unified',
             height=500,
+            showlegend=True,  # Make sure users can see which line is which
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
             margin=dict(l=10, r=10, t=20, b=10),
-            yaxis2=dict(overlaying='y', side='right')
+            yaxis2=dict(overlaying='y', side='right', showgrid=False)
         )
         st.plotly_chart(fig, use_container_width=True)
 
