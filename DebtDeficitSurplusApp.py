@@ -410,7 +410,7 @@ with tab3:
         This project pulls live data from official government and policy research institutions:
 
         * **[Treasury Fiscal Data API](https://fiscaldata.treasury.gov/api-documentation/)**: Provides the historical debt outstanding from 1789 to present.
-        * **[Tax Policy Center (TPC)](https://taxpolicycenter.org/sites/default/files/statistics/spreadsheet/fed_receipt_funds_3.xlsx)**: A non-partisan joint venture of the Urban Institute and Brookings Institution. We use their curated historical receipts and outlays to bridge the gap in official digital records.
+        * **[Tax Policy Center (TPC)](https://taxpolicycenter.org/statistics/federal-receipt-and-outlay-summary)**: A non-partisan joint venture of the Urban Institute and Brookings Institution. We use their curated historical receipts and outlays to bridge the gap in official digital records.
 
         ---
         ### 💡 FAQ
