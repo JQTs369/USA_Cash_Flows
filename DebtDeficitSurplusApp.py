@@ -391,13 +391,13 @@ with tab3:
     Fiscal data is often weaponized to support a specific narrative. My goal with the **USA Reality Project** is to provide a tool that lets the numbers speak for themselves, without the "spin."
 
     ### The Methodology
-    * **Raw Data:** We pull directly from the [Treasury's Fiscal Data API](https://fiscaldata.treasury.gov/).
+    * **Hybrid Data Approach:** To ensure 100% accuracy, we pull the **Total National Debt** directly from the [Treasury's Fiscal Data API](https://fiscaldata.treasury.gov/). However, because official digital records for annual spending are fragmented prior to 1995, we utilize the **Tax Policy Center’s** historical datasets for **Receipts and Outlays**.
     * **Fair Comparison:** By using the **Inherited Path** metric, we acknowledge that no President starts with a clean slate. Every leader is handed a "momentum" of debt and deficit that they must manage.
     * **Independent:** This project is self-funded and user-supported. We don't answer to any party or organization.
 
     ### How to read the charts
-    * **Gold Line:** Total National Debt Outstanding.
-    * **Blue Bars:** Annual Surplus or Deficit (Overspending/Under-spending per year).
+    * **Gold Line:** Total National Debt Outstanding (The "Credit Card Balance").
+    * **Blue Bars:** Annual Surplus or Deficit (The "Monthly Overspending" or "Savings").
     """)
 
     st.divider()
@@ -409,14 +409,16 @@ with tab3:
         This project pulls live data from official government and policy research institutions:
 
         * **[Treasury Fiscal Data API](https://fiscaldata.treasury.gov/api-documentation/)**: Provides the historical debt outstanding from 1789 to present.
-        * **[Historical Debt Dataset](https://fiscaldata.treasury.gov/datasets/historical-debt-outstanding/historical-debt-outstanding)**: Direct source for government debt summaries.
-        * **[Tax Policy Center](https://taxpolicycenter.org/sites/default/files/statistics/spreadsheet/fed_receipt_funds_3.xlsx)**: Used for deficit and outlay data that supplements the Treasury's records.
+        * **[Tax Policy Center (TPC)](https://taxpolicycenter.org/sites/default/files/statistics/spreadsheet/fed_receipt_funds_3.xlsx)**: A non-partisan joint venture of the Urban Institute and Brookings Institution. We use their curated historical receipts and outlays to bridge the gap in official digital records.
 
         ---
         ### 💡 FAQ
-        **Why does the Treasury only have records back to 1995 for some sets?**
-        As noted in our sources, while debt totals are tracked back to 1789, detailed digital breakdowns of receipts and outlays often require external historical research (like the Tax Policy Center) to "make it make sense" for earlier decades.
+        **Why not use the Treasury for everything?**
+        While the Treasury is the source of truth for total debt, their modern digital API for annual "Receipts and Outlays" (the budget breakdown) is primarily focused on the years 1995 to the present. The Tax Policy Center provides the necessary historical research to "make it make sense" for earlier decades.
+
+        **Is there a difference between "Debt" and "Deficit"?**
+        Yes! The **Deficit** is the amount of money the government overspends in a single year (the Blue Bars). The **Debt** is the total accumulated amount owed over time (the Gold Line).
 
         **How often is this data updated?**
-        The Treasury API is updated daily, but historical annual debt is finalized at the end of each fiscal year.
+        The Treasury API is updated daily, but historical annual debt is typically finalized at the end of each fiscal year (Sept 30th).
         """)
