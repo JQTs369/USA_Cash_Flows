@@ -55,7 +55,7 @@ def load_data():
 # 3. Page Config
 st.set_page_config(
     page_title="USA Reality Project",
-    page_icon="https://cdn-icons-png.flaticon.com/128/4800/4800901.png",  # This shows the flag in the browser tab!
+    page_icon="https://cdn-icons-png.flaticon.com/128/1973/1973588.png",  # This shows the icon in the browser tab! https://www.flaticon.com/
     layout="wide",
     initial_sidebar_state="expanded"
 )
