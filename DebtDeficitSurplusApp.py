@@ -210,8 +210,9 @@ with tab1:
         c1, c2 = st.columns(2)
 
         with c1:
+            surplus_or_deficit = 'deficit' if beginning_deficit > 0 else "surplus"
             st.write(
-                f"If {president} maintained the **inherited** deficit of {format_large_number(beginning_deficit)}/year:")
+                f"If {president} maintained the **inherited** {surplus_or_deficit} of {format_large_number(beginning_deficit)}/year:")
             st.metric("Hypothetical Debt", format_large_number(hypothetical_ending_debt))
 
         with c2:
