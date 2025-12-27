@@ -351,7 +351,7 @@ with tab2:
                 This project is 100% independent. No ads, no corporate sponsors. Just raw data.
             </p>
             <p style="color: #888; font-style: italic;">
-                (Donation portal currently under maintenance while we finalize our non-personal bank link)
+                (Donation portal currently under maintenance while we finalize connections)
             </p>
         </div>
         """,
