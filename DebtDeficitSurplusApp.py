@@ -1,6 +1,5 @@
 # --- Imports ---
 import streamlit as st
-from streamlit_gsheets import GSheetsConnection
 import plotly.graph_objects as go
 from AmericanRealityClasses import TreasuryApi as TA
 import pandas as pd
@@ -56,7 +55,7 @@ def load_data():
 # 3. Page Config
 st.set_page_config(
     page_title="USA Reality Project",
-    page_icon="https://cdn-icons-png.flaticon.com/512/197/197374.png",  # This shows the flag in the browser tab!
+    page_icon="https://cdn-icons-png.flaticon.com/128/4800/4800901.png",  # This shows the flag in the browser tab!
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -228,11 +227,21 @@ with tab1:
         c1, c2 = st.columns(2)
 
         with c1:
-            # Explain the 'Starting Line'
-            status_word = "overspending (deficit)" if beginning_deficit < 0 else "surplus"
+            # 1. Determine if they inherited a hole (deficit) or a mountain (surplus)
+            inherited_type = "overspending (deficit)" if beginning_deficit < 0 else "saving (a surplus)"
+
+            # 2. Get the formatted amount for the text
+            inherited_amt = format_large_number(abs(beginning_deficit))  # Use abs() so we don't say 'deficit of -200B'
+
             st.write(f"**The 'Stay the Course' Path**")
-            st.info(
-                f"If {president} simply kept the same annual {status_word} they inherited from the previous administration:")
+
+            # 3. The 6th-grade explanation
+            st.info(f"""
+                When {president} took office, the government was already {inherited_type} by 
+                **{inherited_amt}** every year. 
+
+                If they had changed nothing and just 'stayed the course' for their {term_length} years in office:
+            """)
 
             st.metric("Predicted Debt", format_large_number(hypothetical_ending_debt))
 
