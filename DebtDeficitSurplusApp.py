@@ -150,7 +150,7 @@ with tab1:
             "Choose a President",
             pres_list,
             index=current_index,
-            key="pres_selector_key"
+            key="selected_pres"
         )
 
         # Immediately update the memory so the next time the app runs, it stays here
