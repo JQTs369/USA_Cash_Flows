@@ -204,7 +204,9 @@ with tab1:
         m1.metric("Debt at Start", format_large_number(beginning_debt))
         m2.metric("Debt at End", format_large_number(ending_debt))
         m3.metric("Total Debt Increase", format_large_number(total_debt_change),
-                  delta=format_large_number(total_debt_change), delta_color="inverse")
+                  delta=format_large_number(total_debt_change), delta_color="inverse",
+        help = "Includes Intrest payments"
+        )
 
         st.write("**Annual Deficit & Cumulative Spending**")
         # Dynamic label: says 'Surplus' if the number is positive
@@ -221,7 +223,7 @@ with tab1:
         debt_added_by_term = cumulative_deficit * -1
 
         m6.metric(
-            label="Total Debt Added (Term)",
+            label="New Policy Spending",
             value=format_large_number(debt_added_by_term),
             help="This is the 'Term Deficit'—the total amount spent on programs/wars minus taxes collected."
         )
