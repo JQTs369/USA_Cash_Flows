@@ -216,7 +216,15 @@ with tab1:
                   format_large_number(ending_deficit),
                   delta=format_large_number(deficit_growth),
                   delta_color="normal")  # Green if move toward surplus
-        m6.metric("Total Term Overspending", format_large_number(cumulative_deficit))
+        # m6.metric("Total Term Overspending", format_large_number(cumulative_deficit))
+        # Flip the sign for the 'overspending' to make it a positive 'Debt Added' number
+        debt_added_by_term = cumulative_deficit * -1
+
+        m6.metric(
+            label="Total Debt Added (Term)",
+            value=format_large_number(debt_added_by_term),
+            help="This is the total amount of new money borrowed for spending during this term, excluding interest on old debt."
+        )
 
         # Calculate the absolute difference for display
         abs_diff = abs(responsibility_gap)
