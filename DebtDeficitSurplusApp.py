@@ -59,7 +59,7 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-# Create a visually "popping" header
+    # Visually "popping" header
 st.markdown(
     """
     <div style="text-align: left;">
@@ -71,8 +71,7 @@ st.markdown(
 )
 st.caption("Visualizing America's National Debt and Fiscal History")
 
-# bring in our data
-dfDebt, dfPresidents, dfDeficit = load_data()
+
 
 # --- 4. LIVE DONATION & EXPENSE TRACKER --- Google Sheets for now
 # Use the export format to get the data directly as a CSV
@@ -81,7 +80,7 @@ donations_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=
 expenses_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet=Expenses"
 
 
-@st.cache_data(ttl=3600)  # Only check the sheet once per hour
+@st.cache_data(ttl=60)  # Only check the sheet once per minute
 def get_ledger_data():
     try:
         df_donations = pd.read_csv(donations_url)
@@ -128,6 +127,9 @@ viewType = st.pills("Analysis View", ["President", "Year"], selection_mode="sing
 st.divider()
 
 tab1, tab2, tab3 = st.tabs(["📊 Data Analysis", "💸 Transparency Ledger" ,"📖 Get Learnt (FAQ)"])
+
+# 6. Bring in our data
+dfDebt, dfPresidents, dfDeficit = load_data()
 
 with tab1:
     if viewType == "President":

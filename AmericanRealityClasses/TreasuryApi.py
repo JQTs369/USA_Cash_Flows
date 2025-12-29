@@ -54,7 +54,7 @@ class Treasury:
                     # no more pages
                     break
             else:
-                print(f"Error geting API call: {response.status_code}")
+                print(f"Error getting API call: {response.status_code}")
                 break
         try:
             debtDF = pd.DataFrame(data)
@@ -73,7 +73,7 @@ class Treasury:
         if not os.path.exists(directory):
                 os.makedirs(directory)
 
-        # path to link of button on the taxpolicies page
+        # path to link of button on the tax policies page
         baseUrl = r'https://taxpolicycenter.org/sites/default/files/statistics/spreadsheet/fed_receipt_funds_3.xlsx'
         # Get our data and save it where user chose.
         response = requests.get(baseUrl)
