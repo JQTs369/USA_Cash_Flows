@@ -223,7 +223,7 @@ with tab1:
         m6.metric(
             label="Total Debt Added (Term)",
             value=format_large_number(debt_added_by_term),
-            help="This is the total amount of new money borrowed for spending during this term, excluding interest on old debt."
+            help="This is the 'Term Deficit'—the total amount spent on programs/wars minus taxes collected."
         )
 
         # Calculate the absolute difference for display
