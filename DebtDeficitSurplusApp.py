@@ -205,7 +205,7 @@ with tab1:
         m2.metric("Debt at End", format_large_number(ending_debt))
         m3.metric("Total Debt Increase", format_large_number(total_debt_change),
                   delta=format_large_number(total_debt_change), delta_color="inverse",
-        help = "Includes Intrest payments"
+        help = "This is the 'Bottom Line'—it includes all new spending PLUS the interest paid on debt inherited from previous Presidents."
         )
 
         st.write("**Annual Deficit & Cumulative Spending**")
