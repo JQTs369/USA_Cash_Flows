@@ -150,7 +150,8 @@ with tab1:
             "Choose a President",
             pres_list,
             index=current_index,
-            key="selectbox_key"
+            key="selectbox_key",
+            help="Tip: You can type the name to search quickly!"
         )
 
         # Immediately update the memory so the next time the app runs, it stays here
