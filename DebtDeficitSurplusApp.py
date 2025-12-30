@@ -59,6 +59,14 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# --- ANNOUNCEMENT TOGGLE ---
+show_announcement = True  # Set to False to hide it
+
+if show_announcement:
+    st.info("🚀 **COMING SOON:** Federal Tax Calculator! Compare Progressive vs. Regressive systems. Stay tuned!", icon="🆕")
+
+
     # Visually "popping" header
 st.markdown(
     """
