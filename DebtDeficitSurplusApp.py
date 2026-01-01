@@ -153,7 +153,7 @@ with tab1:
                     **Status:** API Connection Failed & No Local Backup Found.
 
                     The Treasury servers are likely down for New Year maintenance. Since no local 
-                    backup was detected in `resources/`, the interactive charts are disabled.
+                    backup was detected, the interactive charts are disabled.
                 """)
         st.info("Please check the 'Get Learnt' tab for historical context and source links.")
     else:
