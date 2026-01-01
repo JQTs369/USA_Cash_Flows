@@ -149,6 +149,7 @@ with tab1:
     if debt_df.empty:
         # This ONLY triggers if the API is 503 AND the 'resources/debt_backup' file is missing
         st.error("🔌 Treasury Data Source Unavailable - Current Error: 503 Service Temporarily Unavailable")
+
         st.warning("""
                     **Status:** API Connection Failed & No Local Backup Found.
 
