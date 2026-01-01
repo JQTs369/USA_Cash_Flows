@@ -101,6 +101,7 @@ with st.container(border=True):
     with col4:
         number_of_dependents = st.number_input("Number of Dependents", min_value=0, value=0, step=1,help="Number of Dependents may have min or max based on state.")
 
+    # TODO makee style file and move these there
     st.markdown("""
         <style>
         /* This targets the container for the tabs */
@@ -137,6 +138,8 @@ with st.container(border=True):
         }
         </style>
     """, unsafe_allow_html=True)
+
+
 
     # Now your tabs will look like big, bold buttons
     tab1, tab2 = st.tabs(["🧮 TAX CALCULATOR", "📖 FAQ & SOURCES"])
