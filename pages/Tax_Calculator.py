@@ -101,7 +101,45 @@ with st.container(border=True):
     with col4:
         number_of_dependents = st.number_input("Number of Dependents", min_value=0, value=0, step=1,help="Number of Dependents may have min or max based on state.")
 
-    tab1, tab2 = st.tabs(["🧮 Calculator", "📖 FAQ and Sources"])
+    st.markdown("""
+        <style>
+        /* This targets the container for the tabs */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 10px;
+            background-color: transparent;
+        }
+
+        /* This targets the individual tabs */
+        .stTabs [data-baseweb="tab"] {
+            height: 60px; /* Makes them taller */
+            width: 100%;  /* Distributes them evenly */
+            white-space: pre-wrap;
+            background-color: #262730; /* Dark background to pop against the page */
+            border-radius: 8px 8px 8px 8px; /* Rounded corners */
+            color: #ffffff;
+            font-weight: bold;
+            font-size: 18px; /* Bigger font */
+            border: 1px solid #444;
+        }
+
+        /* This targets the tab when it is HOVERED */
+        .stTabs [data-baseweb="tab"]:hover {
+            background-color: #3e404a;
+            border-color: #FF4B4B; /* Streamlit Red border on hover */
+        }
+
+        /* This targets the ACTIVE tab */
+        .stTabs [aria-selected="true"] {
+            background-color: #FF4B4B !important; /* Bright red/orange background */
+            color: white !important;
+            border: none !important;
+            box-shadow: 0px 4px 10px rgba(0,0,0,0.3); /* Adds a little depth */
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    # Now your tabs will look like big, bold buttons
+    tab1, tab2 = st.tabs(["🧮 TAX CALCULATOR", "📖 FAQ & SOURCES"])
 
     with tab1:
         # Logic calls
