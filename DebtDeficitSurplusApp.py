@@ -6,7 +6,7 @@ import pandas as pd
 import math
 
 # --- ANNOUNCEMENT TOGGLE ---
-show_announcement = True  # Set to False to hide it
+show_announcement = True  # Set too False to hide it
 
 
 # 1. Helper Functions
@@ -30,12 +30,12 @@ def format_large_number(value):
 def load_data():
     # TODO make a timer to download this once tax policy updates their site
     # getTaxPolicyDownload() in TA class
-    dfInstance = TA.Treasury()
-    BaseUrl = r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding'
-    debt = dfInstance.getHistoricalDebtAPIData(BaseUrl)
+    df_instance = TA.Treasury()
+    base_url = r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding'
+    debt = df_instance.getHistoricalDebtAPIData(base_url)
     presidents = pd.read_json('AmericanRealityClasses/resources/USAPresidents.json')
 
-    historic_revenues_path = 'AmericanRealityClasses/resources/TaxPolicyCentrHistoricRevenues.xlsx'
+    historic_revenues_path = 'AmericanRealityClasses/resources/TaxPolicyCenterHistoricRevenues.xlsx'
     deficit = pd.read_excel(historic_revenues_path, engine='openpyxl', skiprows=6)
     deficit = deficit.drop(0)
 
@@ -142,309 +142,312 @@ tab1, tab2, tab3 = st.tabs(["📊 Data Analysis", "💸 Transparency Ledger" ,"�
 dfDebt, dfPresidents, dfDeficit = load_data()
 
 with tab1:
-    if viewType == "President":
-        # --- 1. MEMORY INITIALIZATION ---
-        # This sets the very first person the user sees when they open the site
-        if 'selected_pres' not in st.session_state:
-            st.session_state.selected_pres = "Bill Clinton"
+    if dfDebt.empty:
+        # This ONLY triggers if the API is 503 AND the 'resources/debt_backup' file is missing
+        st.error("🔌 Treasury Data Source Unavailable")
+        st.warning("""
+                    **Status:** API Connection Failed & No Local Backup Found.
 
-        # --- 2. THE SELECTOR ---
-        st.subheader("Presidential Fiscal Analysis")
+                    The Treasury servers are likely down for New Year maintenance. Since no local 
+                    backup was detected in `resources/`, the interactive charts are disabled.
+                """)
+        st.info("Please check the 'Get Learnt' tab for historical context and source links.")
+    else:
+        if viewType == "President":
+            # --- 1. MEMORY INITIALIZATION ---
+            # This sets the very first person the user sees when they open the site
+            if 'selected_pres' not in st.session_state:
+                st.session_state.selected_pres = "Bill Clinton"
 
-        # We calculate the index based on whatever is currently in memory
-        pres_list = dfPresidents['name'].tolist()
-        current_index = pres_list.index(st.session_state.selected_pres)
+            # --- 2. THE SELECTOR ---
+            st.subheader("Presidential Fiscal Analysis")
 
-        # We use the 'key' to let Streamlit handle the saving automatically
-        president = st.selectbox(
-            "Choose a President",
-            pres_list,
-            index=current_index,
-            key="selectbox_key",
-            help="Tip: You can type the name to search quickly!"
-        )
+            # We calculate the index based on whatever is currently in memory
+            pres_list = dfPresidents['name'].tolist()
+            current_index = pres_list.index(st.session_state.selected_pres)
 
-        # Immediately update the memory so the next time the app runs, it stays here
-        st.session_state.selected_pres = president
+            # We use the 'key' to let Streamlit handle the saving automatically
+            president = st.selectbox(
+                "Choose a President",
+                pres_list,
+                index=current_index,
+                key="selectbox_key",
+                help="Tip: You can type the name to search quickly!"
+            )
 
-        # --- 3. DATA FILTERING ---
-        president_data = dfPresidents[dfPresidents['name'] == president].iloc[0]
-        start_year, end_year = int(president_data['start_year']), int(president_data['end_year'])
+            # Immediately update the memory so the next time the app runs, it stays here
+            st.session_state.selected_pres = president
 
-        # Check if the dataframe actually has data before filtering
-        if not dfDebt.empty and 'record_fiscal_year' in dfDebt.columns:
+            # --- 3. DATA FILTERING ---
+            president_data = dfPresidents[dfPresidents['name'] == president].iloc[0]
+            start_year, end_year = int(president_data['start_year']), int(president_data['end_year'])
+
+            # Check if the dataframe actually has data before filtering
+
             debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= start_year) & (dfDebt['record_fiscal_year'] <= end_year)]
             deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= start_year) & (dfDeficit['Fiscal Year'] <= end_year)]
-            if not debt_data.empty and not deficit_data.empty:
-                merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
-                combined_data = pd.DataFrame({
-                    'Year': merger['record_fiscal_year'].astype(int),
-                    'Debt': merger['debt_outstanding_amt'],
-                    'Deficit': merger['Surplus or Deficit(-) Total']
-                })
-            else:
-                st.warning("No data found for the selected presidential term.")
-                combined_data = pd.DataFrame({})
-        else:
-            st.error("🔌 Treasury API Data Unavailable")
-            st.info(
-                "The government's fiscal data servers are likely undergoing New Year's Eve maintenance. Please try again in a few hours.")
-            combined_data = pd.DataFrame({})
+            merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
+            combined_data = pd.DataFrame({
+                'Year': merger['record_fiscal_year'].astype(int),
+                'Debt': merger['debt_outstanding_amt'],
+                'Deficit': merger['Surplus or Deficit(-) Total']
+            })
 
-        # --- 4. CALCULATIONS ---
-        st.markdown(f"### {president}'s Fiscal Snapshot ({start_year} - {end_year})")
+            # --- 4. CALCULATIONS ---
+            st.markdown(f"### {president}'s Fiscal Snapshot ({start_year} - {end_year})")
 
-        # debt info
-        beginning_debt = combined_data[combined_data['Year'] == start_year]['Debt'].iloc[0] if not combined_data[
-            combined_data['Year'] == start_year].empty else 0
+            # debt info
+            beginning_debt = combined_data[combined_data['Year'] == start_year]['Debt'].iloc[0] if not combined_data[
+                combined_data['Year'] == start_year].empty else 0
 
-        ending_debt = combined_data[combined_data['Year'] == end_year]['Debt'].iloc[0] if not combined_data[
-            combined_data['Year'] == end_year].empty else 0
+            ending_debt = combined_data[combined_data['Year'] == end_year]['Debt'].iloc[0] if not combined_data[
+                combined_data['Year'] == end_year].empty else 0
 
-        total_debt_change = ending_debt - beginning_debt
-
-        # deficit info
-        beginning_deficit = combined_data[combined_data['Year'] == start_year]['Deficit'].iloc[0] if not combined_data[
-            combined_data['Year'] == start_year].empty else 0
-
-        ending_deficit = combined_data[combined_data['Year'] == end_year]['Deficit'].iloc[0] if not combined_data[
-            combined_data['Year'] == end_year].empty else 0
-
-        deficit_growth = ending_deficit - beginning_deficit
-        cumulative_deficit = combined_data['Deficit'].sum()
-
-        # --- 4.5 'WHAT IF' CALCULATION ---
-        term_length = end_year - start_year
-
-        # If they stayed at the 'Inherited' deficit level every year:
-        hypothetical_total_deficit = beginning_deficit * term_length
-        hypothetical_ending_debt = beginning_debt - hypothetical_total_deficit
-
-        # The "Responsibility Gap" (Difference between reality and the inherited path)
-        responsibility_gap = ending_debt - hypothetical_ending_debt
-
-        # --- 5. METRICS ---
-        st.write("**National Debt Progress**")
-        m1, m2, m3 = st.columns(3)
-        m1.metric("Debt at Start", format_large_number(beginning_debt))
-        m2.metric("Debt at End", format_large_number(ending_debt))
-        m3.metric("Total Debt Increase", format_large_number(total_debt_change),
-                  delta=format_large_number(total_debt_change), delta_color="inverse",
-        help = "This is the 'Bottom Line'—it includes all new spending PLUS the interest paid on debt inherited from previous Presidents."
-        )
-
-        st.write("**Annual Deficit & Cumulative Spending**")
-        # Dynamic label: says 'Surplus' if the number is positive
-        def_label = "Annual Surplus (End)" if ending_deficit > 0 else "Annual Deficit (End)"
-
-        # Check if it's a deficit or surplus while it's still a raw number
-        deficit_surplus_comparison_word = 'Deficit' if beginning_deficit < 0 else 'Surplus'
-
-        # NOW format it for the display
-        formatted_beginning_deficit = format_large_number(beginning_deficit)
-
-        m4, m5, m6 = st.columns(3)
-        m4.metric(f"Annual {deficit_surplus_comparison_word} (Start)", format_large_number(beginning_deficit))
-        m5.metric(def_label,
-                  format_large_number(ending_deficit),
-                  delta=format_large_number(deficit_growth),
-                  delta_color="normal")  # Green if move toward surplus
-        # m6.metric("Total Term Overspending", format_large_number(cumulative_deficit))
-        # Flip the sign for the 'overspending' to make it a positive 'Debt Added' number
-        debt_added_by_term = cumulative_deficit * -1
-
-        m6.metric(
-            label="New Policy Spending",
-            value=format_large_number(debt_added_by_term),
-            help="This is the 'Term Deficit'—the total amount spent on programs/wars minus taxes collected."
-        )
-
-        # Calculate the absolute difference for display
-        abs_diff = abs(responsibility_gap)
-        comparison_word = "lower" if responsibility_gap < 0 else "higher"
-
-        st.write("---")
-        st.markdown("### ⚖️ The Inherited Momentum")
-        st.caption(
-            "No President starts at zero. This section compares the path they were handed vs. what actually happened.")
-
-        c1, c2 = st.columns(2)
-
-        with c1:
-            # 1. Determine if they inherited a hole (deficit) or a mountain (surplus)
-            inherited_type = "overspending (deficit)" if beginning_deficit < 0 else "saving (a surplus)"
-
-            # 2. Get the formatted amount for the text
-            inherited_amt = format_large_number(abs(beginning_deficit))  # Use abs() so we don't say 'deficit of -200B'
-
-            st.write(f"**The 'Stay the Course' Path**")
-
-            # 3. The 6th-grade explanation
-            st.info(f"""
-                When {president} took office, the government was already {inherited_type} by 
-                **{inherited_amt}** every year. 
-
-                If they had changed nothing and just 'stayed the course' for their {term_length} years in office:
-            """)
-
-            st.metric("Predicted Debt", format_large_number(hypothetical_ending_debt))
-
-        with c2:
-            # Explain the 'Result'
-            st.write(f"**The Reality**")
-
-            # Simple logic for the comparison sentence
-            if responsibility_gap < 0:
-                outcome_text = f"ended up **{format_large_number(abs_diff)} LOWER**"
-                delta_label = "Improved the Path"
-            else:
-                outcome_text = f"ended up **{format_large_number(abs_diff)} HIGHER**"
-                delta_label = "Added to the Path"
-
-            st.write(f"Under {president}, the national debt {outcome_text} than if they had just 'stayed the course.'")
-
-            st.metric("Net Fiscal Impact",
-                      format_large_number(responsibility_gap),
-                      delta=delta_label,
-                      delta_color="normal" if responsibility_gap < 0 else "inverse")
-
-        st.divider()
-
-        # --- 6. PLOTTING ---
-        fig = go.Figure()
-
-        # 1. THE ACTUAL DEBT (Gold)
-        fig.add_trace(go.Scatter(
-            x=combined_data['Year'],
-            y=combined_data['Debt'],
-            name='Actual Debt',
-            line=dict(color='#FFD700', width=4),
-            yaxis='y1'
-        ))
-
-        # 2. THE INHERITED PATH (Silver Dashed)
-        # We create a simple two-point line: [Start Year, End Year] -> [Start Debt, Hypo End Debt]
-        fig.add_trace(go.Scatter(
-            x=[start_year, end_year],
-            y=[beginning_debt, hypothetical_ending_debt],
-            name='Inherited Path',
-            line=dict(color='#C0C0C0', width=2, dash='dot'),
-            yaxis='y1'
-        ))
-
-        # 3. THE DEFICIT BARS (Blue)
-        fig.add_trace(go.Bar(
-            x=combined_data['Year'],
-            y=combined_data['Deficit'],
-            name='Annual Deficit/Surplus',
-            marker=dict(color='#2E86C1'),
-            opacity=0.4,
-            yaxis='y2'
-        ))
-
-        fig.update_layout(
-            template='plotly_dark',
-            hovermode='x unified',
-            height=500,
-            showlegend=True,  # Make sure users can see which line is which
-            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-            margin=dict(l=10, r=10, t=20, b=10),
-            yaxis2=dict(overlaying='y', side='right', showgrid=False)
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-
-    else:
-        # --- YEAR VIEW CONTROLS ---
-        st.subheader("Historical Analysis: Custom Range")
-
-        # 1. Setup bounds
-        min_selectable = int(dfDebt['record_fiscal_year'].min())
-        max_selectable = int(dfDebt['record_fiscal_year'].max())
-
-        # 2. Initialize Session State
-        if 'start_y' not in st.session_state:
-            st.session_state.start_y = 1993
-
-        if 'end_y' not in st.session_state:
-            st.session_state.end_y = 2001
-
-        if 'y_slider' not in st.session_state:
-            st.session_state.y_slider = (1993, 2001)
-
-        # 3. Synchronizing Functions
-        def update_slider():
-            st.session_state.y_slider = (st.session_state.start_y, st.session_state.end_y)
-
-        def update_inputs():
-            st.session_state.start_y = st.session_state.y_slider[0]
-            st.session_state.end_y = st.session_state.y_slider[1]
-
-        # 4. UI Controls
-        col_left, col_mid, col_right = st.columns([1, 3, 1])
-        with col_left:
-            st.number_input("Start Year", min_selectable, max_selectable, key="start_y", on_change=update_slider)
-
-        with col_mid:
-            st.slider("Range", min_selectable, max_selectable, key="y_slider", on_change=update_inputs,
-                      label_visibility="hidden")
-
-        with col_right:
-            st.number_input("End Year", min_selectable, max_selectable, key="end_y", on_change=update_slider)
-
-        st.divider()
-
-        # 5. Data Logic
-        y_low, y_high = st.session_state.y_slider
-        debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= y_low) & (dfDebt['record_fiscal_year'] <= y_high)]
-        deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= y_low) & (dfDeficit['Fiscal Year'] <= y_high)]
-        merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
-        combined_data = pd.DataFrame({
-            'Year': merger['record_fiscal_year'].astype(int),
-            'Debt': merger['debt_outstanding_amt'],
-            'Deficit': merger['Surplus or Deficit(-) Total']
-        })
-
-        # --- Metrics Section ---
-        st.markdown(f"#### Fiscal Snapshot: {y_low} - {y_high}")
-        try:
-            beginning_debt = combined_data[combined_data['Year'] == y_low]['Debt'].iloc[0]
-            ending_debt = combined_data[combined_data['Year'] == y_high]['Debt'].iloc[0]
             total_debt_change = ending_debt - beginning_debt
-            cumulative_deficit = combined_data['Deficit'].sum()
-            beginning_deficit = combined_data[combined_data['Year'] == y_low]['Deficit'].iloc[0]
-            ending_deficit = combined_data[combined_data['Year'] == y_high]['Deficit'].iloc[0]
+
+            # deficit info
+            beginning_deficit = combined_data[combined_data['Year'] == start_year]['Deficit'].iloc[0] if not combined_data[
+                combined_data['Year'] == start_year].empty else 0
+
+            ending_deficit = combined_data[combined_data['Year'] == end_year]['Deficit'].iloc[0] if not combined_data[
+                combined_data['Year'] == end_year].empty else 0
+
             deficit_growth = ending_deficit - beginning_deficit
-            m_col1, m_col2, m_col3 = st.columns(3)
+            cumulative_deficit = combined_data['Deficit'].sum()
 
-            with m_col1:
-                st.metric("Debt at Start", format_large_number(beginning_debt))
-                st.metric("Annual Deficit (Start)", format_large_number(beginning_deficit))
+            # --- 4.5 'WHAT IF' CALCULATION ---
+            term_length = end_year - start_year
 
-            with m_col2:
-                st.metric("Debt at End", format_large_number(ending_debt))
-                st.metric("Annual Deficit (End)", format_large_number(ending_deficit),
-                          delta=format_large_number(deficit_growth), delta_color="normal")
-            with m_col3:
-                st.metric("Total Debt Increase", format_large_number(total_debt_change),
-                          delta=format_large_number(total_debt_change), delta_color="inverse")
-                st.metric("Cumulative Overspending", format_large_number(cumulative_deficit))
+            # If they stayed at the 'Inherited' deficit level every year:
+            hypothetical_total_deficit = beginning_deficit * term_length
+            hypothetical_ending_debt = beginning_debt - hypothetical_total_deficit
 
-        except:
-            st.info("Adjust range for metrics.")
+            # The "Responsibility Gap" (Difference between reality and the inherited path)
+            responsibility_gap = ending_debt - hypothetical_ending_debt
 
-        st.divider()
+            # --- 5. METRICS ---
+            st.write("**National Debt Progress**")
+            m1, m2, m3 = st.columns(3)
+            m1.metric("Debt at Start", format_large_number(beginning_debt))
+            m2.metric("Debt at End", format_large_number(ending_debt))
+            m3.metric("Total Debt Increase", format_large_number(total_debt_change),
+                      delta=format_large_number(total_debt_change), delta_color="inverse",
+            help = "This is the 'Bottom Line'—it includes all new spending PLUS the interest paid on debt inherited from previous Presidents."
+            )
 
-        # --- Graph Section ---
-        fig = go.Figure()
-        fig.add_trace(go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Debt',
-                                 line=dict(color='#FFD700', width=3), yaxis='y1'))
-        fig.add_trace(
-            go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Deficit', marker=dict(color='#2E86C1'),
-                   opacity=0.6, yaxis='y2'))
-        fig.update_layout(template='plotly_dark', hovermode='x unified', height=450,
-                          margin=dict(l=10, r=10, t=20, b=10), yaxis2=dict(overlaying='y', side='right'))
-        st.plotly_chart(fig, use_container_width=True)
+            st.write("**Annual Deficit & Cumulative Spending**")
+            # Dynamic label: says 'Surplus' if the number is positive
+            def_label = "Annual Surplus (End)" if ending_deficit > 0 else "Annual Deficit (End)"
+
+            # Check if it's a deficit or surplus while it's still a raw number
+            deficit_surplus_comparison_word = 'Deficit' if beginning_deficit < 0 else 'Surplus'
+
+            # NOW format it for the display
+            formatted_beginning_deficit = format_large_number(beginning_deficit)
+
+            m4, m5, m6 = st.columns(3)
+            m4.metric(f"Annual {deficit_surplus_comparison_word} (Start)", format_large_number(beginning_deficit))
+            m5.metric(def_label,
+                      format_large_number(ending_deficit),
+                      delta=format_large_number(deficit_growth),
+                      delta_color="normal")  # Green if move toward surplus
+            # m6.metric("Total Term Overspending", format_large_number(cumulative_deficit))
+            # Flip the sign for the 'overspending' to make it a positive 'Debt Added' number
+            debt_added_by_term = cumulative_deficit * -1
+
+            m6.metric(
+                label="New Policy Spending",
+                value=format_large_number(debt_added_by_term),
+                help="This is the 'Term Deficit'—the total amount spent on programs/wars minus taxes collected."
+            )
+
+            # Calculate the absolute difference for display
+            abs_diff = abs(responsibility_gap)
+            comparison_word = "lower" if responsibility_gap < 0 else "higher"
+
+            st.write("---")
+            st.markdown("### ⚖️ The Inherited Momentum")
+            st.caption(
+                "No President starts at zero. This section compares the path they were handed vs. what actually happened.")
+
+            c1, c2 = st.columns(2)
+
+            with c1:
+                # 1. Determine if they inherited a hole (deficit) or a mountain (surplus)
+                inherited_type = "overspending (deficit)" if beginning_deficit < 0 else "saving (a surplus)"
+
+                # 2. Get the formatted amount for the text
+                inherited_amt = format_large_number(abs(beginning_deficit))  # Use abs() so we don't say 'deficit of -200B'
+
+                st.write(f"**The 'Stay the Course' Path**")
+
+                # 3. The 6th-grade explanation
+                st.info(f"""
+                    When {president} took office, the government was already {inherited_type} by 
+                    **{inherited_amt}** every year. 
+    
+                    If they had changed nothing and just 'stayed the course' for their {term_length} years in office:
+                """)
+
+                st.metric("Predicted Debt", format_large_number(hypothetical_ending_debt))
+
+            with c2:
+                # Explain the 'Result'
+                st.write(f"**The Reality**")
+
+                # Simple logic for the comparison sentence
+                if responsibility_gap < 0:
+                    outcome_text = f"ended up **{format_large_number(abs_diff)} LOWER**"
+                    delta_label = "Improved the Path"
+                else:
+                    outcome_text = f"ended up **{format_large_number(abs_diff)} HIGHER**"
+                    delta_label = "Added to the Path"
+
+                st.write(f"Under {president}, the national debt {outcome_text} than if they had just 'stayed the course.'")
+
+                st.metric("Net Fiscal Impact",
+                          format_large_number(responsibility_gap),
+                          delta=delta_label,
+                          delta_color="normal" if responsibility_gap < 0 else "inverse")
+
+            st.divider()
+
+            # --- 6. PLOTTING ---
+            fig = go.Figure()
+
+            # 1. THE ACTUAL DEBT (Gold)
+            fig.add_trace(go.Scatter(
+                x=combined_data['Year'],
+                y=combined_data['Debt'],
+                name='Actual Debt',
+                line=dict(color='#FFD700', width=4),
+                yaxis='y1'
+            ))
+
+            # 2. THE INHERITED PATH (Silver Dashed)
+            # We create a simple two-point line: [Start Year, End Year] -> [Start Debt, Hypo End Debt]
+            fig.add_trace(go.Scatter(
+                x=[start_year, end_year],
+                y=[beginning_debt, hypothetical_ending_debt],
+                name='Inherited Path',
+                line=dict(color='#C0C0C0', width=2, dash='dot'),
+                yaxis='y1'
+            ))
+
+            # 3. THE DEFICIT BARS (Blue)
+            fig.add_trace(go.Bar(
+                x=combined_data['Year'],
+                y=combined_data['Deficit'],
+                name='Annual Deficit/Surplus',
+                marker=dict(color='#2E86C1'),
+                opacity=0.4,
+                yaxis='y2'
+            ))
+
+            fig.update_layout(
+                template='plotly_dark',
+                hovermode='x unified',
+                height=500,
+                showlegend=True,  # Make sure users can see which line is which
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                margin=dict(l=10, r=10, t=20, b=10),
+                yaxis2=dict(overlaying='y', side='right', showgrid=False)
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+
+        else:
+            # --- YEAR VIEW CONTROLS ---
+            st.subheader("Historical Analysis: Custom Range")
+
+            # 1. Setup bounds
+            min_selectable = int(dfDebt['record_fiscal_year'].min())
+            max_selectable = int(dfDebt['record_fiscal_year'].max())
+
+            # 2. Initialize Session State
+            if 'start_y' not in st.session_state:
+                st.session_state.start_y = 1993
+
+            if 'end_y' not in st.session_state:
+                st.session_state.end_y = 2001
+
+            if 'y_slider' not in st.session_state:
+                st.session_state.y_slider = (1993, 2001)
+
+            # 3. Synchronizing Functions
+            def update_slider():
+                st.session_state.y_slider = (st.session_state.start_y, st.session_state.end_y)
+
+            def update_inputs():
+                st.session_state.start_y = st.session_state.y_slider[0]
+                st.session_state.end_y = st.session_state.y_slider[1]
+
+            # 4. UI Controls
+            col_left, col_mid, col_right = st.columns([1, 3, 1])
+            with col_left:
+                st.number_input("Start Year", min_selectable, max_selectable, key="start_y", on_change=update_slider)
+
+            with col_mid:
+                st.slider("Range", min_selectable, max_selectable, key="y_slider", on_change=update_inputs,
+                          label_visibility="hidden")
+
+            with col_right:
+                st.number_input("End Year", min_selectable, max_selectable, key="end_y", on_change=update_slider)
+
+            st.divider()
+
+            # 5. Data Logic
+            y_low, y_high = st.session_state.y_slider
+            debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= y_low) & (dfDebt['record_fiscal_year'] <= y_high)]
+            deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= y_low) & (dfDeficit['Fiscal Year'] <= y_high)]
+            merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
+            combined_data = pd.DataFrame({
+                'Year': merger['record_fiscal_year'].astype(int),
+                'Debt': merger['debt_outstanding_amt'],
+                'Deficit': merger['Surplus or Deficit(-) Total']
+            })
+
+            # --- Metrics Section ---
+            st.markdown(f"#### Fiscal Snapshot: {y_low} - {y_high}")
+            try:
+                beginning_debt = combined_data[combined_data['Year'] == y_low]['Debt'].iloc[0]
+                ending_debt = combined_data[combined_data['Year'] == y_high]['Debt'].iloc[0]
+                total_debt_change = ending_debt - beginning_debt
+                cumulative_deficit = combined_data['Deficit'].sum()
+                beginning_deficit = combined_data[combined_data['Year'] == y_low]['Deficit'].iloc[0]
+                ending_deficit = combined_data[combined_data['Year'] == y_high]['Deficit'].iloc[0]
+                deficit_growth = ending_deficit - beginning_deficit
+                m_col1, m_col2, m_col3 = st.columns(3)
+
+                with m_col1:
+                    st.metric("Debt at Start", format_large_number(beginning_debt))
+                    st.metric("Annual Deficit (Start)", format_large_number(beginning_deficit))
+
+                with m_col2:
+                    st.metric("Debt at End", format_large_number(ending_debt))
+                    st.metric("Annual Deficit (End)", format_large_number(ending_deficit),
+                              delta=format_large_number(deficit_growth), delta_color="normal")
+                with m_col3:
+                    st.metric("Total Debt Increase", format_large_number(total_debt_change),
+                              delta=format_large_number(total_debt_change), delta_color="inverse")
+                    st.metric("Cumulative Overspending", format_large_number(cumulative_deficit))
+
+            except:
+                st.info("Adjust range for metrics.")
+
+            st.divider()
+
+            # --- Graph Section ---
+            fig = go.Figure()
+            fig.add_trace(go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Debt',
+                                     line=dict(color='#FFD700', width=3), yaxis='y1'))
+            fig.add_trace(
+                go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Deficit', marker=dict(color='#2E86C1'),
+                       opacity=0.6, yaxis='y2'))
+            fig.update_layout(template='plotly_dark', hovermode='x unified', height=450,
+                              margin=dict(l=10, r=10, t=20, b=10), yaxis2=dict(overlaying='y', side='right'))
+            st.plotly_chart(fig, use_container_width=True)
+
 
 with tab2:
     st.header("Project Transparency & Resources")
@@ -492,7 +495,7 @@ with tab2:
             raise NameError  # Trigger the exception if data isn't loaded
 
     except Exception:
-        # This is your "Finally/Fallback" view while the GSheets connection is WIP
+        # "Finally/Fallback" view while the GSheets connection is WIP
         st.markdown("""
         > 🛠️ **Ledger Status: Connection Pending** > The live transparency ledger is currently being linked to the project's data-tracking sheet. 
         > Once live, this section will show real-time audits of every dollar received and spent.
