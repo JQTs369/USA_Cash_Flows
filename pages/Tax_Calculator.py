@@ -139,6 +139,53 @@ with st.container(border=True):
                   help="This is the 'Bucket' money. Only this portion of your income is subject to tax rates.")
 
     with tab2:
-        st.markdown("FAQ and Sources")
-        st.write("**Standard Deduction:** A flat dollar amount that reduces the income you're taxed on.")
-        st.write("**Personal Exemption:** An amount for yourself and each dependent that further lowers your taxable income.")
+        st.header("Frequently Asked Questions & Data Sources")
+
+        with st.expander("📝 What happened to Personal Exemptions in 2018?"):
+            st.info("""
+            **Historical Context:** Historically, the IRS allowed a "Personal Exemption"—a flat dollar amount you could subtract from your income for yourself, your spouse, and each dependent.
+
+            **The Change:** This was suspended (set to $0) when President Trump signed the **Tax Cuts and Jobs Act (TCJA)** on December 22, 2017. 
+
+            **The Trade-off:** To simplify the code and offset the loss of exemptions, the TCJA:
+            1. Nearly **doubled** the Standard Deduction.
+            2. Significantly increased the **Child Tax Credit**.
+
+            *Note: Under current law, these changes are scheduled to 'sunset' (expire) after 2025, meaning exemptions could return in 2026 unless Congress acts.*
+            """)
+
+        st.divider()
+
+        st.subheader("📚 Primary Data Sources")
+
+        col1, col2 = st.columns(2)
+
+        with col1:
+            st.markdown("#### **The Tax Foundation**")
+            st.write("The primary source for historical bracket thresholds and inflation-adjusted parameters.")
+            st.markdown(
+                "- [Historical Income Tax Brackets](https://taxfoundation.org/data/all/federal/historical-income-tax-rates-brackets/)")
+            st.markdown(
+                "- [Standard Deduction History](https://taxpolicycenter.org/sites/default/files/statistics/pdf/standard_deduction_4.pdf)")
+            st.markdown(
+                "- [Personal Exemptions Post-TCJA](https://taxfoundation.org/research/all/federal/state-personal-exemptions-post-tcja/)")
+
+        with col2:
+            st.markdown("#### **Internal Revenue Service (IRS)**")
+            st.write("Raw Statistics of Income (SOI) data used to verify statutory changes.")
+            st.markdown(
+                "- [SOI Historic Table 2 (Tax Brackets)](https://www.irs.gov/statistics/soi-tax-stats-historic-table-2)")
+            st.markdown(
+                "- [Individual Statistical Tables (Deductions)](https://www.irs.gov/statistics/soi-tax-stats-individual-statistical-tables-by-size-of-adjusted-gross-income)")
+            st.markdown(
+                "- [IRS Publication 02 (Historical Rates & Exemptions)](https://www.irs.gov/pub/irs-soi/02inpetr.pdf)")
+
+        st.markdown("---")
+
+        st.markdown("#### **Federal Reserve Bank of St. Louis (FRED)**")
+        st.write("Used for verifying economic trends and historical exemption values.")
+        st.markdown("- [FRED Main Database](https://fred.stlouisfed.org/)")
+        st.markdown("- [Historical Personal Exemptions Series (Single)](https://fred.stlouisfed.org/series/IITPESP)")
+
+        st.caption(
+            "Disclaimer: This calculator is for historical educational purposes only and does not constitute official tax advice.")
