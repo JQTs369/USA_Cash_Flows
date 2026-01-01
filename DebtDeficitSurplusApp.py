@@ -155,7 +155,6 @@ with tab1:
                     The Treasury servers are likely down for New Year maintenance. Since no local 
                     backup was detected, the interactive charts are disabled.
                 """)
-        st.info("Please check the 'Get Learnt' tab for historical context and source links.")
     else:
         if viewType == "President":
             # --- 1. MEMORY INITIALIZATION ---
