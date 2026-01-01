@@ -53,6 +53,10 @@ def load_data():
     deficit = deficit[deficit['Fiscal Year'] != 'TQ']
     deficit['Fiscal Year'] = deficit['Fiscal Year'].astype(int)
     deficit['Surplus or Deficit(-) Total'] = deficit['Surplus or Deficit(-) Total'] * 1_000_000
+    
+    if debt.empty or deficit.empty:
+        return pd.DataFrame(),presidents,pd.DataFrame()
+
     return debt, presidents, deficit
 
 # 3. Page Config
@@ -139,10 +143,10 @@ st.divider()
 tab1, tab2, tab3 = st.tabs(["📊 Data Analysis", "💸 Transparency Ledger" ,"📖 Get Learnt (FAQ)"])
 
 # 6. Bring in our data
-dfDebt, dfPresidents, dfDeficit = load_data()
+debt_df, df_presidents, df_deficit = load_data()
 
 with tab1:
-    if dfDebt.empty:
+    if debt_df.empty:
         # This ONLY triggers if the API is 503 AND the 'resources/debt_backup' file is missing
         st.error("🔌 Treasury Data Source Unavailable")
         st.warning("""
@@ -163,7 +167,7 @@ with tab1:
             st.subheader("Presidential Fiscal Analysis")
 
             # We calculate the index based on whatever is currently in memory
-            pres_list = dfPresidents['name'].tolist()
+            pres_list = df_presidents['name'].tolist()
             current_index = pres_list.index(st.session_state.selected_pres)
 
             # We use the 'key' to let Streamlit handle the saving automatically
@@ -179,13 +183,13 @@ with tab1:
             st.session_state.selected_pres = president
 
             # --- 3. DATA FILTERING ---
-            president_data = dfPresidents[dfPresidents['name'] == president].iloc[0]
+            president_data = df_presidents[df_presidents['name'] == president].iloc[0]
             start_year, end_year = int(president_data['start_year']), int(president_data['end_year'])
 
             # Check if the dataframe actually has data before filtering
 
-            debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= start_year) & (dfDebt['record_fiscal_year'] <= end_year)]
-            deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= start_year) & (dfDeficit['Fiscal Year'] <= end_year)]
+            debt_data = debt_df[(debt_df['record_fiscal_year'] >= start_year) & (debt_df['record_fiscal_year'] <= end_year)]
+            deficit_data = df_deficit[(df_deficit['Fiscal Year'] >= start_year) & (df_deficit['Fiscal Year'] <= end_year)]
             merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
             combined_data = pd.DataFrame({
                 'Year': merger['record_fiscal_year'].astype(int),
@@ -361,8 +365,8 @@ with tab1:
             st.subheader("Historical Analysis: Custom Range")
 
             # 1. Setup bounds
-            min_selectable = int(dfDebt['record_fiscal_year'].min())
-            max_selectable = int(dfDebt['record_fiscal_year'].max())
+            min_selectable = int(debt_df['record_fiscal_year'].min())
+            max_selectable = int(debt_df['record_fiscal_year'].max())
 
             # 2. Initialize Session State
             if 'start_y' not in st.session_state:
@@ -398,8 +402,8 @@ with tab1:
 
             # 5. Data Logic
             y_low, y_high = st.session_state.y_slider
-            debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= y_low) & (dfDebt['record_fiscal_year'] <= y_high)]
-            deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= y_low) & (dfDeficit['Fiscal Year'] <= y_high)]
+            debt_data = debt_df[(debt_df['record_fiscal_year'] >= y_low) & (debt_df['record_fiscal_year'] <= y_high)]
+            deficit_data = df_deficit[(df_deficit['Fiscal Year'] >= y_low) & (df_deficit['Fiscal Year'] <= y_high)]
             merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
             combined_data = pd.DataFrame({
                 'Year': merger['record_fiscal_year'].astype(int),
