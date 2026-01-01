@@ -26,7 +26,8 @@ class Treasury:
         self.ErrorLog = []
 
     def getHistoricalDebtAPIData(self,
-                                 base_url=r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding'):
+                                 base_url=r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding',
+                                 storage_path=r'resources/debt_backup'):
         """
         Gets api data and all pages into a list of dicts. can be put into a pandas data frame if needed
         Built of this api. # TODO need to try other base urls to see if it is dynamic
@@ -34,41 +35,45 @@ class Treasury:
         """
         data = []
         page_number = 1
-        while True:
-            # try to call data with GET
-            response = requests.get(f"{base_url}?page[number]={page_number}&page[size]=100")
-            if response.status_code == 200:
-                # get out data to phrase
-                json_data = response.json()
-
-                # append the data from the current page to the list
-                data.extend(json_data['data'])
-
-                # get links next key for more pages
-                next_page = json_data['links'].get('next')
-                # increase page number if needed
-                if next_page:
-                    page_number +=1
-                else:
-                    # no more pages
-                    break
-            elif response.status_code == 503:
-                print("⚠️ Treasury API is down for maintenance (503). Using empty fallback.")
-                # TODO: Have a downloaded copy of the Treasury data so when they update teh site our page still works
-                return pd.DataFrame()
-
-            else:
-                print(f"Error getting API call: {response.status_code}")
-                break
+        api_success = False
         try:
-            debt_df = pd.DataFrame(data)
-            # debt_df['record_fiscal_year'] = debt_df['record_fiscal_year'].astype(int)
-            # debt_df['debt_outstanding_amt'] = debt_df['debt_outstanding_amt'].astype(float)
+            while True:
+                # try to call data with GET
+                response = requests.get(f"{base_url}?page[number]={page_number}&page[size]=100")
+                if response.status_code == 200:
+                    # get out data to phrase
+                    json_data = response.json()
+
+                    # append the data from the current page to the list
+                    data.extend(json_data['data'])
+
+                    # get links next key for more pages
+                    next_page = json_data['links'].get('next')
+                    # increase page number if needed
+                    if next_page:
+                        page_number +=1
+                    else:
+                        api_success = True
+                        # no more pages
+                        break
         except Exception as e:
-            print(f"Error making Treasury DataFrame: {e}")
-            return pd.DataFrame()
+            print(f"API Connection Error: {e}")
+
+        if api_success:
+            debt_df = pd.DataFrame(data)
+            debt_df.to_csv(storage_path, index=False)
+            print("Successfully updated local backup From API")
+        else:
+            print("⚠️ API Down. Attempting to load from local backup...")
+            if os.path.exists(storage_path):
+                debt_df = pd.read_csv(storage_path)
+            else:
+                return pd.DataFrame()
+        # Slight cleaning of df
+        debt_df['record_fiscal_year'] = debt_df['record_fiscal_year'].astype(int)
+        debt_df['debt_outstanding_amt'] = debt_df['debt_outstanding_amt'].astype(float)
         return debt_df
-    
+
 
     def getTaxPolicyDownload(self,
                 tax_policy_save_location:str=r'AmericanRealityClasses/resources/TaxPolicyCenterHistoricRevenues.xlsx'):
@@ -87,15 +92,16 @@ class Treasury:
                 f.write(response.content)
                 print(f"Tax Policy File was successfully saved at {tax_policy_save_location}")
         else:
-            print(f"Erorr getting download form url: {response.status_code}")
-        # read in data to parase
+            print(f"Error getting download form url: {response.status_code}")
+            return pd.DataFrame()
+        # read in data to paras
         try:
             path = tax_policy_save_location
             #start on main headers
             df = pd.read_excel(path,skiprows=6)
             # drop first row is empty
             df = df.drop(0)
-            # resname lost columns
+            # rename unnamed columns
             df.rename(columns={"Unnamed: 0":"Fiscal Year","Total":"Receipts Total","Total.1":"Outlays Total","Total.2":"Surplus or Deficit(-) Total"},inplace=True)
             # get rid of dat at the end of table dealing wiith estimating data
             estimate_index = df[df['Fiscal Year'].str.contains('Estimates',case=False,na=False)].index[0]
