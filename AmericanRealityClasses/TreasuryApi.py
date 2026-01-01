@@ -26,8 +26,7 @@ class Treasury:
         self.ErrorLog = []
 
     def getHistoricalDebtAPIData(self,
-                                 base_url=r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding',
-                                 storage_path=r'resources/debt_backup'):
+                                 base_url=r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding'):
         """
         Gets api data and all pages into a list of dicts. can be put into a pandas data frame if needed
         Built of this api. # TODO need to try other base urls to see if it is dynamic
@@ -36,10 +35,14 @@ class Treasury:
         data = []
         page_number = 1
         api_success = False
+        current_dir = os.path.dirname(os.path.abspath(__file__))
+        storage_path = os.path.join(current_dir,'resources','debt_backup.csv')
+        # confirm path exists
+        os.makedirs(os.path.dirname(storage_path), exist_ok=True)
         try:
             while True:
                 # try to call data with GET
-                response = requests.get(f"{base_url}?page[number]={page_number}&page[size]=100")
+                response = requests.get(f"{base_url}?page[number]={page_number}&page[size]=100", timeout=5)
                 if response.status_code == 200:
                     # get out data to phrase
                     json_data = response.json()
@@ -56,6 +59,8 @@ class Treasury:
                         api_success = True
                         # no more pages
                         break
+                else:
+                    break
         except Exception as e:
             print(f"API Connection Error: {e}")
 
@@ -65,7 +70,7 @@ class Treasury:
             print("Successfully updated local backup From API")
         else:
             print("⚠️ API Down. Attempting to load from local backup...")
-            if os.path.exists(storage_path):
+            if os.path.exists(storage_path) and os.path.getsize(storage_path):
                 debt_df = pd.read_csv(storage_path)
             else:
                 return pd.DataFrame()
