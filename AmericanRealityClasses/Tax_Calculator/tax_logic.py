@@ -19,8 +19,8 @@ import json
 class TaxDataManager:
     def __init__(self, income_bracket_file=None):
         # Establish the base directory relative to THIS file
-        # Goes up from AmericanRealityClasses/Tax_Calculator/ to USA_Cash_Flows/
-        self.base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        # Goes up from AmericanRealityClasses/Tax_Calculator/ to resources/
+        self.base_dir = os.path.dirname(os.path.abspath(__file__))
 
         if income_bracket_file:
             self.income_bracket_file = income_bracket_file
