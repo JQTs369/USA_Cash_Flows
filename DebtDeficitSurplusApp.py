@@ -171,15 +171,25 @@ with tab1:
         president_data = dfPresidents[dfPresidents['name'] == president].iloc[0]
         start_year, end_year = int(president_data['start_year']), int(president_data['end_year'])
 
-        debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= start_year) & (dfDebt['record_fiscal_year'] <= end_year)]
-        deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= start_year) & (dfDeficit['Fiscal Year'] <= end_year)]
-
-        merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
-        combined_data = pd.DataFrame({
-            'Year': merger['record_fiscal_year'].astype(int),
-            'Debt': merger['debt_outstanding_amt'],
-            'Deficit': merger['Surplus or Deficit(-) Total']
-        })
+        # Check if the dataframe actually has data before filtering
+        if not dfDebt.empty and 'record_fiscal_year' in dfDebt.columns:
+            debt_data = dfDebt[(dfDebt['record_fiscal_year'] >= start_year) & (dfDebt['record_fiscal_year'] <= end_year)]
+            deficit_data = dfDeficit[(dfDeficit['Fiscal Year'] >= start_year) & (dfDeficit['Fiscal Year'] <= end_year)]
+            if not debt_data.empty and not deficit_data.empty:
+                merger = pd.merge(debt_data, deficit_data, left_on='record_fiscal_year', right_on='Fiscal Year', how='outer')
+                combined_data = pd.DataFrame({
+                    'Year': merger['record_fiscal_year'].astype(int),
+                    'Debt': merger['debt_outstanding_amt'],
+                    'Deficit': merger['Surplus or Deficit(-) Total']
+                })
+            else:
+                st.warning("No data found for the selected presidential term.")
+                combined_data = pd.DataFrame({})
+        else:
+            st.error("🔌 Treasury API Data Unavailable")
+            st.info(
+                "The government's fiscal data servers are likely undergoing New Year's Eve maintenance. Please try again in a few hours.")
+            combined_data = pd.DataFrame({})
 
         # --- 4. CALCULATIONS ---
         st.markdown(f"### {president}'s Fiscal Snapshot ({start_year} - {end_year})")
