@@ -133,7 +133,7 @@ with st.container(border=True):
                   help="This is a flat amount deducted from your income before taxes are calculated.")
 
         c2.metric("Personal Exemptions", f"${total_exemption_amount:,}",
-                  help="A dollar amount allowed for yourself and each dependent. Congress removed this starting in 2018.")
+                  help="A dollar amount allowed for yourself and each dependent. This was removed (suspended to $0) by President Trump signing the Tax Cuts and Jobs Act of 2017.")
 
         c3.metric("Total Taxable Income", f"${taxable_income:,}",
                   help="This is the 'Bucket' money. Only this portion of your income is subject to tax rates.")
