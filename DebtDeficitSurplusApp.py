@@ -184,17 +184,22 @@ with tab1:
         # --- 4. CALCULATIONS ---
         st.markdown(f"### {president}'s Fiscal Snapshot ({start_year} - {end_year})")
 
-        # Safety checks for empty data
+        # debt info
         beginning_debt = combined_data[combined_data['Year'] == start_year]['Debt'].iloc[0] if not combined_data[
             combined_data['Year'] == start_year].empty else 0
+
         ending_debt = combined_data[combined_data['Year'] == end_year]['Debt'].iloc[0] if not combined_data[
             combined_data['Year'] == end_year].empty else 0
+
         total_debt_change = ending_debt - beginning_debt
 
+        # deficit info
         beginning_deficit = combined_data[combined_data['Year'] == start_year]['Deficit'].iloc[0] if not combined_data[
             combined_data['Year'] == start_year].empty else 0
+
         ending_deficit = combined_data[combined_data['Year'] == end_year]['Deficit'].iloc[0] if not combined_data[
             combined_data['Year'] == end_year].empty else 0
+
         deficit_growth = ending_deficit - beginning_deficit
         cumulative_deficit = combined_data['Deficit'].sum()
 
@@ -222,8 +227,12 @@ with tab1:
         # Dynamic label: says 'Surplus' if the number is positive
         def_label = "Annual Surplus (End)" if ending_deficit > 0 else "Annual Deficit (End)"
 
-        beginning_deficit = format_large_number(beginning_deficit)
-        deficit_surplus_comparison_word = 'Deficit' if int(beginning_deficit) < 0 else 'Surplus'
+        # Check if it's a deficit or surplus while it's still a raw number
+        deficit_surplus_comparison_word = 'Deficit' if beginning_deficit < 0 else 'Surplus'
+
+        # NOW format it for the display
+        formatted_beginning_deficit = format_large_number(beginning_deficit)
+
         m4, m5, m6 = st.columns(3)
         m4.metric(f"Annual {deficit_surplus_comparison_word} (Start)", format_large_number(beginning_deficit))
         m5.metric(def_label,
