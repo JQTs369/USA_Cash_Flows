@@ -5,6 +5,9 @@ from AmericanRealityClasses import TreasuryApi as TA
 import pandas as pd
 import math
 
+# --- ANNOUNCEMENT TOGGLE ---
+show_announcement = True  # Set to False to hide it
+
 
 # 1. Helper Functions
 def format_large_number(value):
@@ -60,9 +63,8 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# --- ANNOUNCEMENT TOGGLE ---
-show_announcement = True  # Set to False to hide it
 
+# --- ANNOUNCEMENT Placement
 if show_announcement:
     st.info("🚀 **COMING SOON:** Federal Tax Calculator! Compare Progressive vs. Regressive systems. Stay tuned!", icon="🆕")
 
@@ -220,8 +222,10 @@ with tab1:
         # Dynamic label: says 'Surplus' if the number is positive
         def_label = "Annual Surplus (End)" if ending_deficit > 0 else "Annual Deficit (End)"
 
+        beginning_deficit = format_large_number(beginning_deficit)
+        deficit_surplus_comparison_word = 'Deficit' if int(beginning_deficit) < 0 else 'Surplus'
         m4, m5, m6 = st.columns(3)
-        m4.metric("Annual Deficit (Start)", format_large_number(beginning_deficit))
+        m4.metric(f"Annual {deficit_surplus_comparison_word} (Start)", format_large_number(beginning_deficit))
         m5.metric(def_label,
                   format_large_number(ending_deficit),
                   delta=format_large_number(deficit_growth),
