@@ -32,7 +32,7 @@ def load_data():
     # getTaxPolicyDownload() in TA class
     df_instance = TA.Treasury()
     base_url = r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding'
-    debt = df_instance.getHistoricalDebtAPIData(base_url)
+    debt, data_flag = df_instance.getHistoricalDebtAPIData(base_url)
     presidents = pd.read_json('AmericanRealityClasses/resources/USAPresidents.json')
 
     historic_revenues_path = 'AmericanRealityClasses/resources/TaxPolicyCenterHistoricRevenues.xlsx'
@@ -57,7 +57,7 @@ def load_data():
     if debt.empty or deficit.empty:
         return pd.DataFrame(),presidents,pd.DataFrame()
 
-    return debt, presidents, deficit
+    return debt, presidents, deficit, data_flag
 
 # 3. Page Config
 st.set_page_config(
@@ -143,9 +143,12 @@ st.divider()
 tab1, tab2, tab3 = st.tabs(["📊 Data Analysis", "💸 Transparency Ledger" ,"📖 Get Learnt (FAQ)"])
 
 # 6. Bring in our data
-debt_df, df_presidents, df_deficit = load_data()
+debt_df, df_presidents, df_deficit, data_flag = load_data()
 
 with tab1:
+    if data_flag != 'API':
+        st.info('Current Debt Data is from Treasury Back up - API must be down ')
+
     if debt_df.empty:
         # This ONLY triggers if the API is 503 AND the 'resources/debt_backup' file is missing
         st.error("🔌 Treasury Data Source Unavailable - Current Error: 503 Service Temporarily Unavailable")

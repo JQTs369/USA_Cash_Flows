@@ -33,6 +33,7 @@ class Treasury:
         base_url = r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding'
         """
         data = []
+        data_flag = 'API'
         debt_df = pd.DataFrame()
         page_number = 1
         # setup file paths
@@ -54,6 +55,7 @@ class Treasury:
                     with open(storage_path,'r') as f:
                         json_data = json.load(f)
                     debt_df = pd.DataFrame(json_data['data'])
+                    data_flag = 'Back Up'
 
             # gets API if JSON fails or is old
             if debt_df.empty:
@@ -86,13 +88,14 @@ class Treasury:
         except Exception as e:
             print(f"API Connection Error: {e}")
 
+
         if not debt_df.empty:
             # Slight cleaning of df
             debt_df['record_fiscal_year'] = debt_df['record_fiscal_year'].astype(int)
             debt_df['debt_outstanding_amt'] = debt_df['debt_outstanding_amt'].astype(float)
-            return debt_df
+            return debt_df, data_flag
         else:
-            return pd.DataFrame()
+            return pd.DataFrame(), data_flag
 
     def getTaxPolicyDownload(self,
                              tax_policy_save_location: str = r'AmericanRealityClasses/resources/TaxPolicyCenterHistoricRevenues.xlsx'):
