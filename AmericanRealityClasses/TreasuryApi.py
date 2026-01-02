@@ -159,4 +159,5 @@ if __name__ == '__main__':
     test = Treasury()
     df = test.getHistoricalDebtAPIData()
     print(df.columns.tolist())
+    print(df.head())
 
