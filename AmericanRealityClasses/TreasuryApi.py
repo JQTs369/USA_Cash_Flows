@@ -52,7 +52,7 @@ class Treasury:
                 file_time = os.path.getmtime(storage_path)
                 last_updated = datetime.fromtimestamp(file_time)
                 # use csv files until end of year
-                if datetime.now() - last_updated <timedelta(days=350):
+                if datetime.now() - last_updated > timedelta(days=350):
                     with open(storage_path,'r') as f:
                         json_data = json.load(f)
                     debt_df = pd.DataFrame(json_data['data'])
@@ -99,7 +99,7 @@ class Treasury:
             return pd.DataFrame(), data_flag
 
     def getTaxPolicyDownload(self,
-                             tax_policy_save_location: str = r'AmericanRealityClasses/resources/TaxPolicyCenterHistoricRevenues.xlsx'):
+                             tax_policy_save_location: str = r'resources/TaxPolicyCenterHistoricRevenues.xlsx'):
         df = pd.DataFrame()  # Initialize here so it's always in scope
 
         directory = os.path.dirname(tax_policy_save_location)
@@ -110,7 +110,7 @@ class Treasury:
         should_download = True
         if os.path.exists(tax_policy_save_location):
             file_age = datetime.fromtimestamp(os.path.getmtime(tax_policy_save_location))
-            if datetime.now() - file_age < timedelta(days=350):
+            if datetime.now() - file_age > timedelta(days=350):
                 should_download = False
                 print(f"✅ Using local Tax Policy file (Updated: {file_age.date()})")
 
