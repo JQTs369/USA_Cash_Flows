@@ -8,7 +8,8 @@
         #  From 1920 onwards, debt outstanding has been presented as of the final day of the fiscal year. This is a high-level summary of historical public debt
         #  and does not contain a breakdown of the debt components.
     # https://taxpolicycenter.org/sites/default/files/statistics/spreadsheet/fed_receipt_funds_3.xlsx
-        # treseury site does not have complete history only from 1995 to present -make it make sense
+    # https://taxpolicycenter.org/statistics/federal-receipt-and-outlay-summary-fund-group
+        # treasury site does not have complete history only from 1995 to present -make it make sense
 
 
 # imports
@@ -153,14 +154,13 @@ class Treasury:
             print("No local file found and download failed. Returning empty DataFrame.")
 
         return df
-    
+
 
 
         
 if __name__ == '__main__':
     # instance
     test = Treasury()
-    df = test.getHistoricalDebtAPIData()
-    print(df.columns.tolist())
-    print(df.head())
+    df = test.getTaxPolicyDownload()
+    print(df.tail)
 
