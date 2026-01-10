@@ -12,6 +12,9 @@ from os import write
 import streamlit as st
 import os
 import sys
+import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
 
 # Get the path to the 'USA_Cash_Flows' root directory
 # parent is: USA_Cash_Flows/pages - two levels back
@@ -87,22 +90,42 @@ with st.container(border=True):
     st.subheader("📋 Taxpayer Information")
 
     # setup 4 columns - 2 of 2 side by side
-    col1, col2 = st.columns(2)
-    with col1:
-        gross_income = st.number_input("Enter Gross Annual Income", min_value=0, value=60000, step=1000,help='Total income after standard deduction')
+    # Containers
+    with st.container(border=True):
+        st.subheader("📋 Taxpayer Information")
 
-    with col2:
-        tax_year = st.number_input("Enter Tax Year", min_value=1862, max_value=2024,help='Pick a year to see what you would pay in taxes! inflation needs to be taken into account*')
+        # We define the Year first so the rest of the code knows what it is
+        col1, col2 = st.columns(2)
 
-    col3, col4 = st.columns(2)
-    with col3:
-        marriage_status_selection = st.selectbox("Marriage Status",options=list(status_options.keys()))
-        marriage_status = status_options[marriage_status_selection]
+        with col1:
+            # 1. Define the Year
+            tax_year = st.number_input("Enter Tax Year", min_value=1862, max_value=2024, value=1955,
+                                       help='Pick a year to see what you would pay in taxes!')
 
-    with col4:
-        number_of_dependents = st.number_input("Number of Dependents", min_value=0, value=0, step=1,help="Number of Dependents may have min or max based on state.")
+        with col2:
+            # 2. Define the Income
+            gross_income = st.number_input("Enter Gross Annual Income", min_value=0, value=4400, step=1000,
+                                           help='Total income before deductions')
 
-    # TODO makee style file and move these there
+        # Now that both exist, we can show the expander safely
+        with st.expander("🎈 Why does my income look different in the past?"):
+            st.warning(f"**Inflation Alert:** A dollar in {tax_year} bought much more than a dollar today!")
+            st.write(f"""
+                In {tax_year}, the prices of houses, cars, and candy were much lower. 
+                If you are entering a 'modern' salary (like $60,000) into an old year, 
+                the calculator will think you are incredibly rich!
+            """)
+            st.link_button("Official BLS Inflation Calculator", "https://data.bls.gov/cgi-bin/cpicalc.pl")
+
+        col3, col4 = st.columns(2)
+        with col3:
+            marriage_status_selection = st.selectbox("Marriage Status", options=list(status_options.keys()))
+            marriage_status = status_options[marriage_status_selection]
+
+        with col4:
+            number_of_dependents = st.number_input("Number of Dependents", min_value=0, value=0, step=1,
+                                                   help="Number of Dependents may have min or max based on state.")
+    # TODO make style file and move these there
     st.markdown("""
         <style>
         /* This targets the container for the tabs */
@@ -159,7 +182,7 @@ with st.container(border=True):
             dependents_rate = 0
             note = 'Personal exemptions were suspended starting in 2018 under the Tax Cuts and Jobs Act.'
 
-        # pre tax deductions (Tax Shield)
+        # pre-tax deductions (Tax Shield)
         # Math Fix: Multiplying the rate by the number of dependents
         total_exemption_amount = personal_exemption + (dependents_rate * number_of_dependents)
         total_tax_shield = standard_deduction_amount + total_exemption_amount
@@ -179,6 +202,155 @@ with st.container(border=True):
 
         c3.metric("Total Taxable Income", f"${taxable_income:,}",
                   help="This is the 'Bucket' money. Only this portion of your income is subject to tax rates.")
+
+
+        #  THE PROGRESSIVE CALCULATION
+        remaining_taxable = taxable_income
+        total_progressive_tax = 0
+        buckets = []
+
+        # DYNAMIC COLUMN DETECTIVE
+        cols = income_tax_bracket.columns.tolist()
+
+        # Look for 'Low', 'Lower', 'Min', 'Start'
+        low_col = next((c for c in cols if any(x in c.lower() for x in ['low', 'min', 'start'])), None)
+
+        # Look for 'High', 'Upper', 'Max', 'End'
+        high_col = next((c for c in cols if any(x in c.lower() for x in ['high', 'max', 'end', 'upper'])), None)
+
+        # Look for 'Rate', 'Tax', 'Percentage'
+        rate_col = next((c for c in cols if any(x in c.lower() for x in ['rate', 'tax', 'perc'])), None)
+
+        # DEBUG: If it still fails, show us the columns so we can fix it permanently
+        if not low_col or not rate_col:
+            st.error(f"Could not identify columns. Found: {cols}")
+            st.stop()
+
+        # Logic to iterate through brackets
+        for i, row in income_tax_bracket.iterrows():
+            lower = row[low_col]
+            upper = row[high_col] if (high_col and not pd.isna(row[high_col])) else 1e15
+            rate = row[rate_col]
+
+            # How much space is in this bucket?
+            bracket_width = upper - lower
+
+            if remaining_taxable > 0:
+                amount_in_bracket = min(remaining_taxable, bracket_width)
+                tax_for_bracket = amount_in_bracket * rate
+                total_progressive_tax += tax_for_bracket
+                remaining_taxable -= amount_in_bracket
+
+                buckets.append({
+                    "Bracket": f"{rate * 100:.1f}%",
+                    "Amount": amount_in_bracket,
+                    "Tax": tax_for_bracket
+                })
+
+        effective_rate = (total_progressive_tax / gross_income) * 100 if gross_income > 0 else 0
+
+        # --- THE REGRESSIVE (FLAT) COMPARISON ---
+        flat_rate = 0.20
+        total_flat_tax = gross_income * flat_rate
+        flat_effective_rate = 20.0
+
+        st.divider()
+        st.subheader("🪣 The 'Bucket' Breakdown (Progressive)")
+
+        # Create the visual Chart
+        if buckets:
+            df_buckets = pd.DataFrame(buckets)
+
+            # Create the labels: Income amount on top, Tax amount below in parentheses
+            # We use <br> for a line break inside the bar
+            bar_labels = [
+                f"${row['Amount']:,.0f}<br>Tax: ${row['Tax']:,.0f}"
+                for _, row in df_buckets.iterrows()
+            ]
+
+            fig_buckets = go.Figure()
+            fig_buckets.add_trace(go.Bar(
+                x=df_buckets["Bracket"],
+                y=df_buckets["Amount"],
+                text=bar_labels,
+                textposition='inside',  # Forces the text inside the bars
+                insidetextanchor='middle',  # Centers the text vertically in the bar
+                textfont=dict(size=20, color="black"),  # Large, readable font
+                marker=dict(
+                    color='#FFD700',  # Gold bars
+                    line=dict(color='white', width=1)  # Thin border to define the 'bucket'
+                ),
+                hovertemplate="Income in this bucket: %{y:$.2f}<extra></extra>"
+            ))
+
+            fig_buckets.update_layout(
+                title=dict(
+                    text="Your Income Buckets",
+                    font=dict(size=26)
+                ),
+                template="plotly_dark",
+                yaxis_title="Dollars in Bucket",
+                xaxis_title="Tax Rate applied to this bucket",
+                height=600,
+                uniformtext=dict(minsize=14, mode='hide')  # Hides text if the bar is too tiny to fit it
+            )
+            st.plotly_chart(fig_buckets, use_container_width=True)
+
+        # --- FINAL COMPARISON ---
+        st.subheader("⚖️ Progressive vs. Regressive (Flat)")
+        col_res1, col_res2 = st.columns(2)
+
+        with col_res1:
+            st.markdown(f"#### **Progressive System ({tax_year})**")
+            st.write("The current US style: You pay more as you earn more.")
+            st.metric("Total Federal Tax", f"${total_progressive_tax:,.2f}")
+            st.metric("Effective Tax Rate", f"{effective_rate:.2f}%",
+                      help="This is the percentage of your TOTAL income that went to the government.")
+            st.caption("✅ Better for: Lower and Middle class.")
+
+        with col_res2:
+            st.markdown("#### **Regressive System (20% Flat)**")
+            st.write("The 'Simple' style: Everyone pays the exact same percentage.")
+            st.metric("Total Federal Tax", f"${total_flat_tax:,.2f}")
+            st.metric("Effective Tax Rate", "20.00%")
+
+            # Show the difference
+            diff = total_flat_tax - total_progressive_tax
+            if diff > 0:
+                st.error(f"You would pay **${abs(diff):,.2f} MORE** under a flat tax.")
+            else:
+                st.success(f"You would pay **${abs(diff):,.2f} LESS** under a flat tax.")
+
+             # Help a 6th grader learn it
+            st.divider()
+            st.header("🎓 Learning the Systems")
+
+            edu_col1, edu_col2 = st.columns(2)
+
+            with edu_col1:
+                st.info("### 1. The Progressive 'Buckets'")
+                st.write("""
+                        In America, we use a **Progressive** system. Think of it like a video game 
+                        where the levels get harder, but only *after* you finish the easy ones.
+        
+                        - **Level 1:** Your first dollars are untaxed (The Shield).
+                        - **Level 2:** Your next dollars are taxed very little.
+                        - **Level 3:** Only your "extra" high-earning dollars get the big tax.
+                        """)
+
+            with edu_col2:
+                st.warning("### 2. The Regressive 'Flat Tax'")
+                st.write("""
+                        A **Regressive** or **Flat** tax sounds fair because everyone pays 20%. 
+                        But 20% of a poor person's money is their **rent and food**. 
+                        20% of a rich person's money is just **less savings**.
+        
+                        It "regresses" because it feels heavier the less money you have.
+                        """)
+
+    # Optional: Add the Take-Home metric here too!
+    take_home = gross_income - total_progressive_tax
+    st.metric("💰 Your Annual Take-Home Pay", f"${take_home:,.2f}")
 
     with tab2:
         st.header("Frequently Asked Questions & Data Sources")
