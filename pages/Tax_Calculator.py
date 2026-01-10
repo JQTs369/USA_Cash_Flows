@@ -221,7 +221,7 @@ with st.container(border=True):
         # Look for 'Rate', 'Tax', 'Percentage'
         rate_col = next((c for c in cols if any(x in c.lower() for x in ['rate', 'tax', 'perc'])), None)
 
-        # DEBUG: If it still fails, show us the columns so we can fix it permanently
+        # DEBUG: If it still fails
         if not low_col or not rate_col:
             st.error(f"Could not identify columns. Found: {cols}")
             st.stop()
@@ -249,7 +249,7 @@ with st.container(border=True):
 
         effective_rate = (total_progressive_tax / gross_income) * 100 if gross_income > 0 else 0
 
-        # --- THE REGRESSIVE (FLAT) COMPARISON ---
+        #  THE REGRESSIVE (FLAT) COMPARISON
         flat_rate = 0.20
         total_flat_tax = gross_income * flat_rate
         flat_effective_rate = 20.0
@@ -262,7 +262,6 @@ with st.container(border=True):
             df_buckets = pd.DataFrame(buckets)
 
             # Create the labels: Income amount on top, Tax amount below in parentheses
-            # We use <br> for a line break inside the bar
             bar_labels = [
                 f"${row['Amount']:,.0f}<br>Tax: ${row['Tax']:,.0f}"
                 for _, row in df_buckets.iterrows()
@@ -275,7 +274,7 @@ with st.container(border=True):
                 text=bar_labels,
                 textposition='inside',  # Forces the text inside the bars
                 insidetextanchor='middle',  # Centers the text vertically in the bar
-                textfont=dict(size=20, color="black"),  # Large, readable font
+                textfont=dict(size=20, color="black"),
                 marker=dict(
                     color='#FFD700',  # Gold bars
                     line=dict(color='white', width=1)  # Thin border to define the 'bucket'
@@ -296,7 +295,7 @@ with st.container(border=True):
             )
             st.plotly_chart(fig_buckets, use_container_width=True)
 
-        # --- FINAL COMPARISON ---
+        # FINAL COMPARISON
         st.subheader("⚖️ Progressive vs. Regressive (Flat)")
         col_res1, col_res2 = st.columns(2)
 
@@ -348,7 +347,7 @@ with st.container(border=True):
                         It "regresses" because it feels heavier the less money you have.
                         """)
 
-    # Optional: Add the Take-Home metric here too!
+    # Add Take-Home metric
     take_home = gross_income - total_progressive_tax
     st.metric("💰 Your Annual Take-Home Pay", f"${take_home:,.2f}")
 
