@@ -1,6 +1,7 @@
 # --- Imports ---
 import streamlit as st
 import plotly.graph_objects as go
+import plotly.express as px
 import pandas as pd
 import math
 # personal Classes
@@ -9,6 +10,7 @@ from AmericanRealityClasses.Tax_Calculator import tax_logic as TL
 
 # --- ANNOUNCEMENT TOGGLE ---
 show_announcement = True  # Set too False to hide it
+announcement_text ="📊 **COMING SOON:** Yearly Budget Reports! We're currently mapping historical spending categories (Defense, Healthcare, etc.) to give you a full picture of where the money went."
 
 
 # 1. Helper Functions
@@ -63,7 +65,7 @@ st.set_page_config(
 
 # --- ANNOUNCEMENT Placement
 if show_announcement:
-    st.info("🚀 **COMING SOON:** Federal Tax Calculator! Compare Progressive vs. Regressive systems. Stay tuned!", icon="🆕")
+    st.info(announcement_text, icon="🚀")
 
 
     # Visually "popping" header
@@ -390,6 +392,51 @@ with tab1:
 
             st.plotly_chart(fig, use_container_width=True)
 
+            # --- 7. SPENDING BREAKDOWN (THE PIE) ---
+            st.divider()
+
+            # Fix: We define the label using only 'president' since we are in the President block
+            pie_label = f"the {president} Administration"
+
+            st.subheader(f"🏛️ Budget Breakdown: Where did the money go?")
+            st.info("🚧Still Under Construction🚧")
+            st.caption(f"Estimated average spending categories for {pie_label}")
+
+            # Placeholder data (to be linked to your data source later)
+            sample_spending = pd.DataFrame({
+                "Category": ["Social Security", "Health (Medicare/Medicaid)", "National Defense", "Interest on Debt",
+                             "Other Services"],
+                "Amount": [21, 15, 13, 11, 40]
+            })
+
+            fig_pie = px.pie(
+                sample_spending,
+                values='Amount',
+                names='Category',
+                hole=0.5,
+                color_discrete_sequence=px.colors.qualitative.Pastel
+            )
+
+            fig_pie.update_layout(
+                template="plotly_dark",
+                height=450,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+            )
+
+            # Display with columns
+            p_col1, p_col2 = st.columns([2, 1])
+            with p_col1:
+                st.plotly_chart(fig_pie, use_container_width=True)
+            with p_col2:
+                st.markdown("#### **Budgetary Insights**")
+                st.write(f"""
+                                This breakdown illustrates how tax dollars were allocated during {pie_label}. 
+
+                                **Note on Interest:** The 'Interest on Debt' slice represents the cost of 
+                                servicing existing debt. This is mandatory spending that does not fund 
+                                current programs or infrastructure.
+                            """)
+
         else:
             # --- YEAR VIEW CONTROLS ---
             st.subheader("Historical Analysis: Custom Range")
@@ -528,6 +575,45 @@ with tab1:
             )
 
             st.plotly_chart(fig, use_container_width=True)
+
+            # 7. SPENDING BREAKDOWN
+            st.divider()
+
+            # Use the variables already defined in your Year View
+            pie_label_year = f"the {y_low} - {y_high} Period"
+
+            st.subheader(f"🏛️ Budget Breakdown: Where did the money go?")
+            st.caption(f"Estimated average spending categories for {pie_label_year}")
+
+            # Placeholder data (we can make this dynamic later)
+            sample_spending_year = pd.DataFrame({
+                "Category": ["Social Security", "Health (Medicare/Medicaid)", "National Defense", "Interest on Debt",
+                             "Other Services"],
+                "Amount": [21, 15, 13, 11, 40]
+            })
+
+            fig_pie_year = px.pie(
+                sample_spending_year,
+                values='Amount',
+                names='Category',
+                hole=0.5,
+                color_discrete_sequence=px.colors.qualitative.Pastel
+            )
+
+            fig_pie_year.update_layout(
+                template="plotly_dark",
+                height=450,
+                legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+            )
+
+            py_col1, py_col2 = st.columns([2, 1])
+            with py_col1:
+                st.plotly_chart(fig_pie_year, use_container_width=True)
+            with py_col2:
+                st.markdown("#### **Budgetary Insights**")
+                st.write(f"This represents the average distribution of federal spending across {pie_label_year}.")
+                st.info(
+                    "The **Interest on Debt** slice is particularly important when looking at long year ranges, as it shows the growing cost of borrowing.")
 
 
 with tab2:
