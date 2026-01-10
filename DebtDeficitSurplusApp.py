@@ -28,36 +28,17 @@ def format_large_number(value):
 # 2. Data Loading
 @st.cache_data # so we do not load the data on every click
 def load_data():
-    # TODO make a timer to download this once tax policy updates their site
-    # getTaxPolicyDownload() in TA class
     df_instance = TA.Treasury()
     base_url = r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding'
     debt, data_flag = df_instance.getHistoricalDebtAPIData(base_url)
     presidents = pd.read_json('AmericanRealityClasses/resources/USAPresidents.json')
+    deficits = deficit = df_instance.getTaxPolicyDownload()
 
-    historic_revenues_path = 'AmericanRealityClasses/resources/TaxPolicyCenterHistoricRevenues.xlsx'
-    deficit = pd.read_excel(historic_revenues_path, engine='openpyxl', skiprows=6)
-    deficit = deficit.drop(0)
+    if debt.empty or deficits.empty:
+        return pd.DataFrame(),presidents,pd.DataFrame(), data_flag
 
-    deficit.rename(columns={
-        "Unnamed: 0": "Fiscal Year",
-        "Total": "Receipts Total",
-        "Total.1": "Outlays Total",
-        "Total.2": "Surplus or Deficit(-) Total"
-    }, inplace=True)
+    return debt, presidents, deficits, data_flag
 
-    # Filter out estimates and clean TQ
-    mask = deficit['Fiscal Year'].astype(str).str.contains('Estimates', case=False, na=False)
-    estimateIndex = deficit[mask].index[0]
-    deficit = deficit.iloc[:estimateIndex - 2]
-    deficit = deficit[deficit['Fiscal Year'] != 'TQ']
-    deficit['Fiscal Year'] = deficit['Fiscal Year'].astype(int)
-    deficit['Surplus or Deficit(-) Total'] = deficit['Surplus or Deficit(-) Total'] * 1_000_000
-    
-    if debt.empty or deficit.empty:
-        return pd.DataFrame(),presidents,pd.DataFrame()
-
-    return debt, presidents, deficit, data_flag
 
 # 3. Page Config
 st.set_page_config(
