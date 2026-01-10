@@ -1,9 +1,11 @@
 # --- Imports ---
 import streamlit as st
 import plotly.graph_objects as go
-from AmericanRealityClasses import TreasuryApi as TA
 import pandas as pd
 import math
+# personal Classes
+from AmericanRealityClasses import TreasuryApi as TA
+from AmericanRealityClasses.Tax_Calculator import tax_logic as TL
 
 # --- ANNOUNCEMENT TOGGLE ---
 show_announcement = True  # Set too False to hide it
@@ -28,14 +30,24 @@ def format_large_number(value):
 # 2. Data Loading
 @st.cache_data # so we do not load the data on every click
 def load_data():
+    # instances
     df_instance = TA.Treasury()
+    tax_manager = TL.TaxDataManager()
+
     base_url = r'https://api.fiscaldata.treasury.gov/services/api/fiscal_service/v2/accounting/od/debt_outstanding'
     debt, data_flag = df_instance.getHistoricalDebtAPIData(base_url)
     presidents = pd.read_json('AmericanRealityClasses/resources/USAPresidents.json')
     deficits = deficit = df_instance.getTaxPolicyDownload()
 
+    # Get the min/max rates from your new logic
+    tax_extremes = tax_manager.get_annual_rate_extremes(status='single')
+
     if debt.empty or deficits.empty:
         return pd.DataFrame(),presidents,pd.DataFrame(), data_flag
+
+    # MERGE TAX DATA INTO DEBT
+    # This ensures every year in 'debt' now knows its High/Low tax rates
+    debt = pd.merge(debt, tax_extremes, left_on='record_fiscal_year', right_on='Year', how='left')
 
     return debt, presidents, deficits, data_flag
 
@@ -178,8 +190,13 @@ with tab1:
             combined_data = pd.DataFrame({
                 'Year': merger['record_fiscal_year'].astype(int),
                 'Debt': merger['debt_outstanding_amt'],
-                'Deficit': merger['Surplus or Deficit(-) Total']
+                'Deficit': merger['Surplus or Deficit(-) Total'],
+                # add the tax rates
+                'Low_Tax': merger.get('Lowest_Rate', 0),
+                'High_Tax': merger.get('Highest_Rate', 0)
             })
+            # get surplus of deficit status
+            combined_data['Def_Label'] = combined_data['Deficit'].apply(lambda x: "Surplus" if x > 0 else "Deficit")
 
             # --- 4. CALCULATIONS ---
             st.markdown(f"### {president}'s Fiscal Snapshot ({start_year} - {end_year})")
@@ -309,11 +326,20 @@ with tab1:
                 y=combined_data['Debt'],
                 name='Actual Debt',
                 line=dict(color='#FFD700', width=4),
-                yaxis='y1'
+                yaxis='y1',
+                # Add Def_Label to customdata here too!
+                customdata=combined_data[['Low_Tax', 'High_Tax', 'Def_Label']],
+                hovertemplate=(
+                        "<span style='font-size:22px;'><b>📅 %{x}</b></span><br><br>" +
+                        "<span style='font-size:20px;'>💰 <b>Debt:</b> %{y}</span><br>" +
+                        "<span style='font-size:20px;'>📊 <b>%{customdata[2]}:</b> %{customdata[1]}</span><br>" +
+                        "<span style='font-size:20px;'>📉 <b>Min Tax:</b> %{customdata[0]:.1f}%</span><br>" +
+                        "<span style='font-size:20px;'>📈 <b>Max Tax:</b> %{customdata[1]:.1f}%</span>" +
+                        "<extra></extra>"
+                )
             ))
 
             # 2. THE INHERITED PATH (Silver Dashed)
-            # We create a simple two-point line: [Start Year, End Year] -> [Start Debt, Hypo End Debt]
             fig.add_trace(go.Scatter(
                 x=[start_year, end_year],
                 y=[beginning_debt, hypothetical_ending_debt],
@@ -326,7 +352,9 @@ with tab1:
             fig.add_trace(go.Bar(
                 x=combined_data['Year'],
                 y=combined_data['Deficit'],
-                name='Annual Deficit/Surplus',
+                name='Annual Fiscal Status',
+                customdata=combined_data['Def_Label'],  # Pass the labels here
+                hovertemplate="<b>%{customdata}:</b> %{y}<extra></extra>",  # Use the label
                 marker=dict(color='#2E86C1'),
                 opacity=0.4,
                 yaxis='y2'
@@ -341,8 +369,26 @@ with tab1:
                 margin=dict(l=10, r=10, t=20, b=10),
                 yaxis2=dict(overlaying='y', side='right', showgrid=False)
             )
-            st.plotly_chart(fig, use_container_width=True)
 
+
+            fig.update_layout(
+                template='plotly_dark',
+                hovermode='x unified',
+                height=600,  # Made it taller
+                showlegend=True,
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                margin=dict(l=10, r=10, t=20, b=10),
+                yaxis2=dict(overlaying='y', side='right', showgrid=False),
+                # THE BIGGER BOX SETTINGS:
+                hoverlabel=dict(
+                    bgcolor="#1e1e1e",
+                    font_size=24,
+                    bordercolor="#FFD700",
+                    namelength=-1
+                )
+            )
+
+            st.plotly_chart(fig, use_container_width=True)
 
         else:
             # --- YEAR VIEW CONTROLS ---
@@ -392,8 +438,13 @@ with tab1:
             combined_data = pd.DataFrame({
                 'Year': merger['record_fiscal_year'].astype(int),
                 'Debt': merger['debt_outstanding_amt'],
-                'Deficit': merger['Surplus or Deficit(-) Total']
+                'Deficit': merger['Surplus or Deficit(-) Total'],
+                # add the tax rates
+                'Low_Tax': merger.get('Lowest_Rate', 0),
+                'High_Tax': merger.get('Highest_Rate', 0)
             })
+            # get surplus of deficit status
+            combined_data['Def_Label'] = combined_data['Deficit'].apply(lambda x: "Surplus" if x > 0 else "Deficit")
 
             # --- Metrics Section ---
             st.markdown(f"#### Fiscal Snapshot: {y_low} - {y_high}")
@@ -427,13 +478,55 @@ with tab1:
 
             # --- Graph Section ---
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=combined_data['Year'], y=combined_data['Debt'], name='Debt',
-                                     line=dict(color='#FFD700', width=3), yaxis='y1'))
+
+            # Year View:
+            fig.add_trace(go.Scatter(
+                x=combined_data['Year'],
+                y=combined_data['Debt'],
+                name='Actual Debt',
+                line=dict(color='#FFD700', width=4),
+                yaxis='y1',
+                # We feed it 3 things: Low Tax, High Tax, and the Label (Surplus/Deficit)
+                customdata=combined_data[['Low_Tax', 'High_Tax', 'Def_Label']],
+                hovertemplate=(
+                        "<span style='font-size:26px;'><b>📅 %{x}</b></span><br><br>" +
+                        "<span style='font-size:20px;'>💰 <b>Debt:</b> %{y}</span><br>" +
+                        "<span style='font-size:20px;'>📊 <b>%{customdata[2]}:</b> %{customdata[1]}</span><br>" +
+                        "<span style='font-size:20px;'>📉 <b>Min Tax:</b> %{customdata[0]:.1f}%</span><br>" +
+                        "<span style='font-size:20px;'>📈 <b>Max Tax:</b> %{customdata[1]:.1f}%</span>" +
+                        "<extra></extra>"
+                )
+            ))
+
+            # --- Year View: Bar Trace Fix ---
             fig.add_trace(
-                go.Bar(x=combined_data['Year'], y=combined_data['Deficit'], name='Deficit', marker=dict(color='#2E86C1'),
-                       opacity=0.6, yaxis='y2'))
-            fig.update_layout(template='plotly_dark', hovermode='x unified', height=450,
-                              margin=dict(l=10, r=10, t=20, b=10), yaxis2=dict(overlaying='y', side='right'))
+                go.Bar(
+                    x=combined_data['Year'],
+                    y=combined_data['Deficit'],
+                    name='Annual Fiscal Status',
+                    customdata=combined_data['Def_Label'],
+                    hovertemplate="<b>%{customdata}:</b> %{y}<extra></extra>",
+                    marker=dict(color='#2E86C1'),
+                    opacity=0.6,
+                    yaxis='y2'
+                )
+            )
+
+            # --- YEAR VIEW LAYOUT ---
+            fig.update_layout(
+                template='plotly_dark',
+                hovermode='x unified',
+                height=600,
+                margin=dict(l=10, r=10, t=20, b=10),
+                yaxis2=dict(overlaying='y', side='right'),
+                hoverlabel=dict(
+                    bgcolor="#1e1e1e",
+                    font_size=24,
+                    font_family="Arial Black",
+                    bordercolor="#FFD700"
+                )
+            )
+
             st.plotly_chart(fig, use_container_width=True)
 
 

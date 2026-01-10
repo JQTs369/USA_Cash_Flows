@@ -61,7 +61,7 @@ class TaxDataManager:
             return 0, 0, ""
 
     def get_clean_income_tax_data(self, year=0, status='single'):
-        # Matches your mapping: Joint=1, Separate=4, Single=7, HoH=10 - each status is 3 columns of data
+        # filter map for columns for each file status
         filing_status_map = {
             "single": 7,
             "married_joint": 1,
@@ -85,4 +85,37 @@ class TaxDataManager:
 
         clean_df['High'] = clean_df['Low'].shift(-1).fillna(float('inf'))
         return clean_df
+
+    def get_annual_rate_extremes(self, status='single'):
+        """
+        Calculates the min and max marginal rates for every year in the dataset.
+        """
+        if self.raw_bracket_df.empty:
+            return pd.DataFrame()
+
+        # 1. Get the first column (years)
+        raw_years = self.raw_bracket_df.iloc[:, 0]
+
+        # 2. Convert to numeric, turning text/errors into 'NaN'
+        numeric_years = pd.to_numeric(raw_years, errors='coerce')
+
+        # 3. Drop NaNs, get unique values, and sort
+        years = sorted(numeric_years.dropna().unique(), reverse=True)
+
+        results = []
+        for year in years:
+            try:
+                # Ensure year is passed as an int
+                df_year = self.get_clean_income_tax_data(year=int(year), status=status)
+
+                if not df_year.empty:
+                    results.append({
+                        'Year': int(year),
+                        'Lowest_Rate': df_year['Rate'].min() * 100,
+                        'Highest_Rate': df_year['Rate'].max() * 100
+                    })
+            except Exception:
+                continue
+
+        return pd.DataFrame(results)
 
